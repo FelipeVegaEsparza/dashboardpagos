@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: payments_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: payments_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "3307:3306"
+
+  api:
+    image: php:8.2-apache
+    container_name: payments_api
+    volumes:
+      - ./public:/var/www/html
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_NAME: payments_db
+      DB_USER: user
+      DB_PASSWORD: password
+    # Habilitar mod_rewrite y extensiones necesarias si fuera el caso, 
+    # por ahora script simple de instalacion de extensiones
+    command: >
+      bash -c "docker-php-ext-install pdo pdo_mysql && apache2-foreground"
+
+volumes:
+  db_data:
