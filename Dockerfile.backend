@@ -1,0 +1,15 @@
+FROM php:8.2-apache
+
+# Install extensions
+RUN docker-php-ext-install pdo pdo_mysql
+
+# Enable mod_rewrite
+RUN a2enmod rewrite
+
+# Copy source code
+COPY public /var/www/html
+
+# Set permissions (optional but recommended)
+RUN chown -R www-data:www-data /var/www/html
+
+EXPOSE 80
