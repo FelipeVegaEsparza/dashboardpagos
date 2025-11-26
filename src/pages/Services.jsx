@@ -209,11 +209,12 @@ const Services = () => {
                                         src={currentService.image_url}
                                         alt={currentService.name}
                                         style={{
-                                            width: '200px',
+                                            width: '300px',
                                             height: '200px',
-                                            objectFit: 'cover',
+                                            objectFit: 'contain',
                                             borderRadius: '12px',
-                                            border: '1px solid rgba(255,255,255,0.1)'
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            background: 'rgba(15, 23, 42, 0.4)'
                                         }}
                                     />
                                 )}
