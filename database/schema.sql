@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS clients (
 CREATE TABLE IF NOT EXISTS services (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    description TEXT
+    description TEXT,
+    image_url VARCHAR(500)
 );
 
 CREATE TABLE IF NOT EXISTS products (
