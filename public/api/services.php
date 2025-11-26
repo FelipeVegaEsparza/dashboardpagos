@@ -16,11 +16,11 @@ switch ($method) {
         // Handle File Upload
         $imageUrl = null;
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = '../uploads/services/';
+            $uploadDir = __DIR__ . '/../uploads/services/';
             if (!is_dir($uploadDir)) {
                 if (!@mkdir($uploadDir, 0777, true)) {
                     $error = error_get_last();
-                    file_put_contents('debug.log', "Mkdir failed: " . print_r($error, true) . "\n", FILE_APPEND);
+                    file_put_contents(__DIR__ . '/debug.log', "Mkdir failed: " . print_r($error, true) . "\n", FILE_APPEND);
                     http_response_code(500);
                     echo json_encode(['error' => 'Failed to create upload directory']);
                     exit;
@@ -35,7 +35,7 @@ switch ($method) {
             // Validate extension
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
             if (!in_array($fileExtension, $allowedExtensions)) {
-                file_put_contents('debug.log', "Invalid extension: $fileExtension\n", FILE_APPEND);
+                file_put_contents(__DIR__ . '/debug.log', "Invalid extension: $fileExtension\n", FILE_APPEND);
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid file type. Allowed: ' . implode(', ', $allowedExtensions)]);
                 exit;
@@ -48,7 +48,7 @@ switch ($method) {
                 $imageUrl = '/uploads/services/' . $newFileName;
             } else {
                 $error = error_get_last();
-                file_put_contents('debug.log', "Move uploaded file failed: " . print_r($error, true) . "\nPath: $dest_path\nTmp: $fileTmpPath\n", FILE_APPEND);
+                file_put_contents(__DIR__ . '/debug.log', "Move uploaded file failed: " . print_r($error, true) . "\nPath: $dest_path\nTmp: $fileTmpPath\n", FILE_APPEND);
                 http_response_code(500);
                 echo json_encode(['error' => 'Failed to move uploaded file']);
                 exit;
