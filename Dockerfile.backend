@@ -12,4 +12,10 @@ COPY public /var/www/html
 # Set permissions (optional but recommended)
 RUN chown -R www-data:www-data /var/www/html
 
+# Enable PHP error logging
+RUN echo "error_reporting = E_ALL" >> /usr/local/etc/php/conf.d/error-logging.ini && \
+    echo "display_errors = Off" >> /usr/local/etc/php/conf.d/error-logging.ini && \
+    echo "log_errors = On" >> /usr/local/etc/php/conf.d/error-logging.ini && \
+    echo "error_log = /var/log/php_errors.log" >> /usr/local/etc/php/conf.d/error-logging.ini
+
 EXPOSE 80
