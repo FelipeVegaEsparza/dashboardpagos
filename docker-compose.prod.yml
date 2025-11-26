@@ -7,6 +7,9 @@ services:
       dockerfile: Dockerfile.frontend
     depends_on:
       - api
+    networks:
+      - default
+      - dokploy-network
     restart: always
 
   api:
@@ -37,3 +40,7 @@ services:
 
 volumes:
   db_data_prod:
+
+networks:
+  dokploy-network:
+    external: true
