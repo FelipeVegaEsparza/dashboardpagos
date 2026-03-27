@@ -27,7 +27,8 @@ services:
       ENVIRONMENT: production
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: always
     networks:
       - default
@@ -47,6 +48,12 @@ services:
     restart: always
     networks:
       - default
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
   db_data_prod:
