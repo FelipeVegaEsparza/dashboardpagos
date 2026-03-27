@@ -3,8 +3,11 @@ FROM php:8.2-apache
 # Install extensions
 RUN docker-php-ext-install pdo pdo_mysql
 
-# Enable mod_rewrite
-RUN a2enmod rewrite
+# Enable Apache modules
+RUN a2enmod rewrite headers
+
+# Configure Apache to pass Authorization header
+RUN echo 'SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1' >> /etc/apache2/apache2.conf
 
 # Copy source code
 COPY public /var/www/html

@@ -1,4 +1,4 @@
-
+version: '3.8'
 
 services:
   frontend:
@@ -11,6 +11,8 @@ services:
       - default
       - dokploy-network
     restart: always
+    environment:
+      - NODE_ENV=production
 
   api:
     build:
@@ -18,25 +20,33 @@ services:
       dockerfile: Dockerfile.backend
     environment:
       DB_HOST: db
-      DB_NAME: payments_db
-      DB_USER: user
-      DB_PASSWORD: password
+      DB_NAME: ${MYSQL_DATABASE:-payments_db}
+      DB_USER: ${MYSQL_USER:-user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-password}
+      JWT_SECRET: ${JWT_SECRET}
+      ENVIRONMENT: production
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     depends_on:
       - db
     restart: always
+    networks:
+      - default
+      - dokploy-network
 
   db:
     image: mysql:8.0
     container_name: payments_db_prod
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: payments_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-payments_db}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
     volumes:
       - db_data_prod:/var/lib/mysql
       - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     restart: always
+    networks:
+      - default
 
 volumes:
   db_data_prod:

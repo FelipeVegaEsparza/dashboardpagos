@@ -46,11 +46,11 @@ const Subscriptions = () => {
 
     const fetchSubscriptions = async () => {
         try {
-            const data = await api.get('/subscriptions.php?all=true');
-            console.log('Subscriptions data:', data);
-            setSubscriptions(data || []);
+            setLoading(true);
+            const response = await api.getSubscriptions({ all: true });
+            setSubscriptions(response.items || response || []);
         } catch (error) {
-            console.error(error);
+            console.error('Error fetching subscriptions:', error);
             setSubscriptions([]);
         } finally {
             setLoading(false);
@@ -59,16 +59,20 @@ const Subscriptions = () => {
 
     const fetchClients = async () => {
         try {
-            const data = await api.get('/clients.php');
-            setClients(data);
-        } catch (error) { console.error(error); }
+            const response = await api.getClients({ limit: 1000 });
+            setClients(response.items || response);
+        } catch (error) { 
+            console.error('Error fetching clients:', error); 
+        }
     };
 
     const fetchServices = async () => {
         try {
-            const data = await api.get('/services.php');
-            setServices(data);
-        } catch (error) { console.error(error); }
+            const response = await api.getServices();
+            setServices(response.items || response);
+        } catch (error) { 
+            console.error('Error fetching services:', error); 
+        }
     };
 
     const handleServiceChange = async (e) => {
@@ -77,9 +81,11 @@ const Subscriptions = () => {
         setNewSubscription({ ...newSubscription, product_id: '' });
         if (serviceId) {
             try {
-                const data = await api.get(`/products.php?service_id=${serviceId}`);
-                setProducts(data);
-            } catch (error) { console.error(error); }
+                const response = await api.getProducts(serviceId);
+                setProducts(response.items || response);
+            } catch (error) { 
+                console.error('Error fetching products:', error); 
+            }
         } else {
             setProducts([]);
         }
@@ -88,7 +94,7 @@ const Subscriptions = () => {
     const handleCreate = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/subscriptions.php', newSubscription);
+            await api.createSubscription(newSubscription);
             setShowModal(false);
             setNewSubscription({
                 client_id: '',
@@ -125,7 +131,7 @@ const Subscriptions = () => {
                 formData.append('receipt', paymentData.receipt);
             }
 
-            await api.post('/payments.php', formData);
+            await api.createPayment(formData);
             setShowPaymentModal(false);
             setSelectedSubForPayment(null);
             fetchSubscriptions(); // Refresh to see updated dates
@@ -155,7 +161,8 @@ const Subscriptions = () => {
         setShowHistoryModal(true);
         setLoadingHistory(true);
         try {
-            const data = await api.get(`/payments.php?subscription_id=${sub.id}`);
+            const response = await api.getPayments(sub.id);
+            setPaymentHistory(response.items || response);
             setPaymentHistory(data);
         } catch (error) {
             console.error(error);

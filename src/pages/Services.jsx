@@ -23,17 +23,17 @@ const Services = () => {
 
     const fetchServices = async () => {
         try {
-            const data = await api.get('/services.php');
-            const servicesWithProducts = await Promise.all(data.map(async (service) => {
-                const products = await api.get(`/products.php?service_id=${service.id}`);
-                return { ...service, products };
-            }));
-            setServices(servicesWithProducts);
-            if (servicesWithProducts.length > 0 && activeTab >= servicesWithProducts.length) {
+            setLoading(true);
+            // Use optimized endpoint that returns services with products in one request
+            const response = await api.getServices(true);
+            const servicesData = response.items || response;
+            setServices(servicesData);
+            if (servicesData.length > 0 && activeTab >= servicesData.length) {
                 setActiveTab(0);
             }
         } catch (error) {
-            console.error(error);
+            console.error('Error fetching services:', error);
+            alert(error.message || 'Failed to load services');
         } finally {
             setLoading(false);
         }
@@ -53,7 +53,7 @@ const Services = () => {
                 formData.append('id', selectedService.id);
             }
 
-            await api.post('/services.php', formData);
+            await api.createService(formData);
 
             setShowServiceModal(false);
             setNewService({ name: '', description: '', image_file: null });
@@ -68,7 +68,7 @@ const Services = () => {
     const handleDeleteService = async (id) => {
         if (window.confirm('¿Estás seguro de eliminar este servicio? Se eliminarán también sus productos.')) {
             try {
-                await api.delete(`/services.php?id=${id}`);
+                await api.deleteService(id);
                 fetchServices();
             } catch (error) {
                 console.error(error);
@@ -94,9 +94,9 @@ const Services = () => {
         e.preventDefault();
         try {
             if (isEditingProduct) {
-                await api.put('/products.php', { ...newProduct, id: newProduct.id });
+                await api.updateProduct({ ...newProduct, id: newProduct.id });
             } else {
-                await api.post('/products.php', { ...newProduct, service_id: services[activeTab].id });
+                await api.createProduct({ ...newProduct, service_id: services[activeTab].id });
             }
             setShowProductModal(false);
             setNewProduct({ name: '', price: '', billing_cycle: 'monthly' });
@@ -110,7 +110,7 @@ const Services = () => {
     const handleDeleteProduct = async (productId) => {
         if (window.confirm('¿Estás seguro de eliminar este producto?')) {
             try {
-                await api.delete(`/products.php?id=${productId}`);
+                await api.deleteProduct(productId);
                 fetchServices();
             } catch (error) {
                 console.error(error);

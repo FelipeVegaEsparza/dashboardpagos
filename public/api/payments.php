@@ -1,108 +1,261 @@
 <?php
+/**
+ * Payments API Endpoint - Protected with Authentication
+ * Optimized with transaction safety and race condition prevention
+ */
+
 require_once 'config.php';
+require_once 'auth_middleware.php';
+
+// Require authentication
+AuthMiddleware::requireAuth();
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-if ($method === 'POST') {
-    // Handle File Upload
-    $receiptUrl = null;
-    if (isset($_FILES['receipt']) && $_FILES['receipt']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = '../uploads/receipts/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
+switch ($method) {
+    case 'GET':
+        handleGet($pdo);
+        break;
+
+    case 'POST':
+        handlePost($pdo);
+        break;
         
-        $fileTmpPath = $_FILES['receipt']['tmp_name'];
-        $fileName = $_FILES['receipt']['name'];
-        $fileSize = $_FILES['receipt']['size'];
-        $fileType = $_FILES['receipt']['type'];
-        $fileNameCmps = explode(".", $fileName);
-        $fileExtension = strtolower(end($fileNameCmps));
+    default:
+        ApiResponse::error('Method not allowed', 405);
+}
 
-        $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
-        $dest_path = $uploadDir . $newFileName;
+/**
+ * Handle GET request - Get payment history
+ */
+function handleGet(PDO $pdo): void {
+    $subscriptionId = InputValidator::int($_GET['subscription_id'] ?? null);
+    
+    if (!$subscriptionId) {
+        ApiResponse::error('Subscription ID is required', 400);
+        return;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                p.id, p.subscription_id, p.date, p.amount, p.status, 
+                p.receipt_url, p.created_at
+            FROM payments p
+            WHERE p.subscription_id = ?
+            ORDER BY p.date DESC, p.id DESC
+        ");
+        $stmt->execute([$subscriptionId]);
+        $payments = $stmt->fetchAll();
+        
+        ApiResponse::success(['items' => $payments]);
+        
+    } catch (PDOException $e) {
+        error_log('Error fetching payments: ' . $e->getMessage());
+        ApiResponse::serverError('Failed to fetch payments');
+    }
+}
 
-        if(move_uploaded_file($fileTmpPath, $dest_path)) {
-            $receiptUrl = '/uploads/receipts/' . $newFileName;
+/**
+ * Handle POST request - Register payment with transaction safety
+ */
+function handlePost(PDO $pdo): void {
+    // Handle file upload first
+    $receiptUrl = null;
+    
+    if (isset($_FILES['receipt']) && $_FILES['receipt']['error'] !== UPLOAD_ERR_NO_FILE) {
+        $receiptUrl = handleReceiptUpload($_FILES['receipt']);
+        if ($receiptUrl === false) {
+            return; // Error already sent
         }
     }
-
-    // Handle JSON or FormData
-    // If content-type is json, use php://input. If multipart, use $_POST
+    
+    // Handle form data
     $contentType = $_SERVER["CONTENT_TYPE"] ?? '';
     if (strpos($contentType, 'application/json') !== false) {
         $data = json_decode(file_get_contents('php://input'), true);
     } else {
         $data = $_POST;
     }
-
-    if (!isset($data['subscription_id']) || !isset($data['amount']) || !isset($data['date'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Missing required fields']);
-        exit;
-    }
-
+    
+    // Validation
+    $validator = new InputValidator($data);
+    $validator
+        ->required('subscription_id', 'Subscription ID is required')
+        ->numeric('subscription_id', 1, null, 'Invalid subscription ID')
+        ->required('amount', 'Amount is required')
+        ->numeric('amount', 0.01, 999999999.99, 'Invalid amount')
+        ->required('date', 'Payment date is required')
+        ->date('date', 'Y-m-d', 'Invalid date format');
+    
+    $validator->throwIfFailed();
+    
+    $subscriptionId = (int) $data['subscription_id'];
+    $amount = (float) $data['amount'];
+    $date = $data['date'];
+    
     try {
         $pdo->beginTransaction();
-
-        // 1. Registrar el pago
-        $stmt = $pdo->prepare("INSERT INTO payments (subscription_id, date, amount, status, receipt_url) VALUES (?, ?, ?, 'paid', ?)");
-        $stmt->execute([$data['subscription_id'], $data['date'], $data['amount'], $receiptUrl]);
-        $paymentId = $pdo->lastInsertId();
-
-        // 2. Obtener información de la suscripción y el producto para calcular la próxima fecha
+        
+        // Lock subscription row to prevent race conditions
         $stmt = $pdo->prepare("
-            SELECT s.next_payment_date, p.billing_cycle 
-            FROM subscriptions s 
-            JOIN products p ON s.product_id = p.id 
+            SELECT s.id, s.next_payment_date, p.billing_cycle, p.price
+            FROM subscriptions s
+            JOIN products p ON s.product_id = p.id
             WHERE s.id = ?
+            FOR UPDATE
         ");
-        $stmt->execute([$data['subscription_id']]);
-        $info = $stmt->fetch();
-
-        if ($info) {
-            // Calcular nueva fecha de pago
-            // Usamos la fecha de pago actual (next_payment_date) como base para mantener el ciclo
-            // O usamos la fecha actual si ya pasó mucho tiempo? 
-            // Lo estándar es sumar al next_payment_date original para no perder periodos, 
-            // o sumar a la fecha de pago si se quiere reiniciar el ciclo.
-            // Asumiremos que se suma al next_payment_date para mantener la coherencia del ciclo.
-            
-            $currentNextDate = new DateTime($info['next_payment_date']);
-            
-            if ($info['billing_cycle'] === 'monthly') {
-                $currentNextDate->modify('+1 month');
-            } else {
-                $currentNextDate->modify('+1 year');
-            }
-            
-            $newNextDate = $currentNextDate->format('Y-m-d');
-
-            // 3. Actualizar la suscripción
-            $stmt = $pdo->prepare("UPDATE subscriptions SET next_payment_date = ? WHERE id = ?");
-            $stmt->execute([$newNextDate, $data['subscription_id']]);
+        $stmt->execute([$subscriptionId]);
+        $subscription = $stmt->fetch();
+        
+        if (!$subscription) {
+            $pdo->rollBack();
+            ApiResponse::notFound('Subscription');
+            return;
         }
-
+        
+        // Validate amount matches expected (optional but recommended)
+        $expectedAmount = (float) $subscription['price'];
+        $tolerance = 0.01; // Allow small rounding differences
+        if (abs($amount - $expectedAmount) > $tolerance) {
+            // Log warning but still allow (for partial payments or price changes)
+            error_log("Payment amount ($amount) differs from expected ($expectedAmount) for subscription $subscriptionId");
+        }
+        
+        // Insert payment record
+        $stmt = $pdo->prepare("
+            INSERT INTO payments 
+            (subscription_id, date, amount, status, receipt_url) 
+            VALUES (?, ?, ?, 'paid', ?)
+        ");
+        $stmt->execute([$subscriptionId, $date, $amount, $receiptUrl]);
+        
+        $paymentId = $pdo->lastInsertId();
+        
+        // Calculate new next payment date
+        $currentNextDate = new DateTime($subscription['next_payment_date']);
+        
+        if ($subscription['billing_cycle'] === 'monthly') {
+            $currentNextDate->modify('+1 month');
+        } else {
+            $currentNextDate->modify('+1 year');
+        }
+        
+        $newNextDate = $currentNextDate->format('Y-m-d');
+        
+        // Update subscription
+        $stmt = $pdo->prepare("
+            UPDATE subscriptions 
+            SET next_payment_date = ?, status = 'active'
+            WHERE id = ?
+        ");
+        $stmt->execute([$newNextDate, $subscriptionId]);
+        
         $pdo->commit();
-        echo json_encode(['id' => $paymentId, 'message' => 'Payment registered successfully', 'new_next_payment_date' => $newNextDate ?? null]);
-
-    } catch (Exception $e) {
+        
+        ApiResponse::success([
+            'id' => $paymentId,
+            'subscription_id' => $subscriptionId,
+            'amount' => $amount,
+            'date' => $date,
+            'new_next_payment_date' => $newNextDate,
+            'message' => 'Payment registered successfully'
+        ], 201);
+        
+    } catch (PDOException $e) {
         $pdo->rollBack();
-        http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
+        error_log('Error registering payment: ' . $e->getMessage());
+        ApiResponse::serverError('Failed to register payment');
     }
-} elseif ($method === 'GET') {
-    if (!isset($_GET['subscription_id'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Missing subscription_id']);
-        exit;
-    }
-
-    $stmt = $pdo->prepare("SELECT * FROM payments WHERE subscription_id = ? ORDER BY date DESC, id DESC");
-    $stmt->execute([$_GET['subscription_id']]);
-    echo json_encode($stmt->fetchAll());
-} else {
-    http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed']);
 }
-?>
+
+/**
+ * Handle receipt file upload with security validation
+ */
+function handleReceiptUpload(array $file): string|false {
+    // Check upload errors
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $errorMsg = match ($file['error']) {
+            UPLOAD_ERR_INI_SIZE => 'File exceeds server limit (upload_max_filesize)',
+            UPLOAD_ERR_FORM_SIZE => 'File exceeds form limit',
+            UPLOAD_ERR_PARTIAL => 'File partially uploaded',
+            UPLOAD_ERR_NO_TMP_DIR => 'Server configuration error',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file',
+            UPLOAD_ERR_EXTENSION => 'Upload stopped by extension',
+            default => 'Unknown upload error'
+        };
+        ApiResponse::error($errorMsg, 400);
+        return false;
+    }
+    
+    // Validate file size (max 5MB for receipts)
+    $maxSize = 5 * 1024 * 1024;
+    if ($file['size'] > $maxSize) {
+        ApiResponse::error('File too large. Maximum size is 5MB', 400);
+        return false;
+    }
+    
+    // Validate MIME type
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mimeType = $finfo->file($file['tmp_name']);
+    
+    $allowedMimes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'application/pdf'
+    ];
+    
+    if (!in_array($mimeType, $allowedMimes)) {
+        ApiResponse::error('Invalid file type. Only images (JPEG, PNG, GIF, WebP) and PDF allowed', 400);
+        return false;
+    }
+    
+    // Determine extension
+    $extension = match ($mimeType) {
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'application/pdf' => 'pdf',
+        default => null
+    };
+    
+    if (!$extension) {
+        ApiResponse::error('Unsupported file format', 400);
+        return false;
+    }
+    
+    // Create upload directory with secure permissions
+    $uploadDir = __DIR__ . '/../uploads/receipts/';
+    if (!is_dir($uploadDir)) {
+        if (!mkdir($uploadDir, 0755, true)) {
+            error_log('Failed to create receipts directory: ' . $uploadDir);
+            ApiResponse::serverError('Upload directory creation failed');
+            return false;
+        }
+    }
+    
+    // Prevent script execution in upload directory
+    $htaccess = $uploadDir . '.htaccess';
+    if (!file_exists($htaccess)) {
+        file_put_contents($htaccess, "Options -ExecCGI\nAddHandler cgi-script .php .pl .jsp .asp .sh .cgi\n<FilesMatch \"\\.(php|pl|jsp|asp|sh|cgi)$\">\nOrder allow,deny\nDeny from all\n</FilesMatch>");
+    }
+    
+    // Generate secure filename
+    $filename = bin2hex(random_bytes(16)) . '_' . time() . '.' . $extension;
+    $filepath = $uploadDir . $filename;
+    
+    // Move uploaded file
+    if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+        error_log('Failed to move receipt file to: ' . $filepath);
+        ApiResponse::serverError('File upload failed');
+        return false;
+    }
+    
+    // Set secure permissions
+    chmod($filepath, 0644);
+    
+    return '/uploads/receipts/' . $filename;
+}
