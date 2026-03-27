@@ -142,11 +142,16 @@ export const AuthProvider = ({ children }) => {
                 scheduleTokenRefresh(response.access_token);
                 
                 return { success: true };
+            } else {
+                return { 
+                    success: false, 
+                    error: response.error || 'Login failed' 
+                };
             }
         } catch (error) {
             return { 
                 success: false, 
-                error: error.message || 'Login failed' 
+                error: error.message || 'Error de conexión con el servidor. Verifica que el servicio esté disponible.' 
             };
         }
     };

@@ -50,7 +50,23 @@ class ApiService {
             throw new Error('Session expired. Please login again.');
         }
 
-        const data = await response.json();
+        // Get response text first
+        const text = await response.text();
+        
+        // Check if response is empty
+        if (!text || text.trim() === '') {
+            throw new Error('Empty response from server. Please check if the API is running.');
+        }
+
+        // Try to parse as JSON
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (parseError) {
+            // Not valid JSON - could be HTML error page
+            console.error('Invalid JSON response:', text.substring(0, 500));
+            throw new Error('Server returned invalid response. Please check server logs or try again later.');
+        }
 
         if (!response.ok) {
             throw new Error(data.error?.message || data.error || 'Request failed');

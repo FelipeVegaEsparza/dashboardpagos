@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     start_date DATE NOT NULL,
     next_payment_date DATE NOT NULL,
     status ENUM('active', 'cancelled', 'paused') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );

@@ -12,6 +12,9 @@ const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 300; // 5 minutes
 const RATE_LIMIT_WINDOW = 3600; // 1 hour
 
+// Set JSON content type
+header('Content-Type: application/json; charset=utf-8');
+
 /**
  * Simple file-based rate limiting
  * In production, use Redis
@@ -136,49 +139,63 @@ function handleLogin(array $input, string $ipAddress): void {
     
     global $pdo;
     
-    // Fetch user
-    $stmt = $pdo->prepare("SELECT id, username, password_hash, email, role, is_active FROM users WHERE username = ?");
-    $stmt->execute([$username]);
-    $user = $stmt->fetch();
-    
-    // Verify password (constant time comparison)
-    if (!$user || !password_verify($input['password'], $user['password_hash'])) {
-        RateLimiter::recordAttempt($ipAddress . ':' . $username, false);
-        http_response_code(401);
-        echo json_encode(['error' => 'Invalid credentials']);
+    // Check if database connection is available
+    if (!isset($pdo) || $pdo === null) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database connection not available']);
         return;
     }
     
-    // Check if user is active
-    if (!$user['is_active']) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Account disabled']);
+    try {
+        // Fetch user
+        $stmt = $pdo->prepare("SELECT id, username, password_hash, email, role, is_active FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch();
+        
+        // Verify password (constant time comparison)
+        if (!$user || !password_verify($input['password'], $user['password_hash'])) {
+            RateLimiter::recordAttempt($ipAddress . ':' . $username, false);
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid credentials']);
+            return;
+        }
+        
+        // Check if user is active
+        if (!$user['is_active']) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Account disabled']);
+            return;
+        }
+        
+        // Update last login
+        $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+        $stmt->execute([$user['id']]);
+        
+        // Generate tokens
+        $accessPayload = [
+            'sub' => $user['id'],
+            'username' => $user['username'],
+            'email' => $user['email'],
+            'role' => $user['role']
+        ];
+        
+        $accessToken = JWT::generate($accessPayload, 900); // 15 minutes
+        $refreshToken = JWT::generateRefreshToken();
+        
+        // Store refresh token hash in database (for revocation)
+        $refreshHash = hash('sha256', $refreshToken);
+        $expiresAt = date('Y-m-d H:i:s', time() + 604800); // 7 days
+        
+        $stmt = $pdo->prepare("INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)");
+        $stmt->execute([$user['id'], $refreshHash, $expiresAt]);
+        
+        RateLimiter::recordAttempt($ipAddress . ':' . $username, true);
+    } catch (PDOException $e) {
+        error_log('Database error during login: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error. Please try again later.']);
         return;
     }
-    
-    // Update last login
-    $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
-    $stmt->execute([$user['id']]);
-    
-    // Generate tokens
-    $accessPayload = [
-        'sub' => $user['id'],
-        'username' => $user['username'],
-        'email' => $user['email'],
-        'role' => $user['role']
-    ];
-    
-    $accessToken = JWT::generate($accessPayload, 900); // 15 minutes
-    $refreshToken = JWT::generateRefreshToken();
-    
-    // Store refresh token hash in database (for revocation)
-    $refreshHash = hash('sha256', $refreshToken);
-    $expiresAt = date('Y-m-d H:i:s', time() + 604800); // 7 days
-    
-    $stmt = $pdo->prepare("INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)");
-    $stmt->execute([$user['id'], $refreshHash, $expiresAt]);
-    
-    RateLimiter::recordAttempt($ipAddress . ':' . $username, true);
     
     echo json_encode([
         'success' => true,

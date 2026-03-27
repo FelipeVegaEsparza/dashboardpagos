@@ -6,9 +6,34 @@
 
 // Error handling - don't expose sensitive info in production
 $isProduction = getenv('ENVIRONMENT') === 'production';
-ini_set('display_errors', $isProduction ? 0 : 1);
+ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/error.log');
+
+// Register shutdown function to catch fatal errors and return JSON
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && ($error['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR))) {
+        // Clear any output that might have been sent
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        
+        $isProduction = getenv('ENVIRONMENT') === 'production';
+        $message = $isProduction 
+            ? 'Internal server error. Please try again later.' 
+            : 'Fatal error: ' . $error['message'] . ' in ' . $error['file'] . ':' . $error['line'];
+        
+        echo json_encode([
+            'success' => false,
+            'error' => $message
+        ]);
+        exit;
+    }
+});
 
 // CORS Configuration
 $allowedOrigins = [
@@ -31,7 +56,10 @@ $allowedOrigins = array_unique(array_filter($allowedOrigins));
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
 // Validate and set CORS headers
-if (in_array($origin, $allowedOrigins)) {
+// Allow requests with no origin (same-origin requests through proxy)
+if (empty($origin)) {
+    // Same-origin request - no CORS headers needed
+} elseif (in_array($origin, $allowedOrigins)) {
     header("Access-Control-Allow-Origin: $origin");
     header("Access-Control-Allow-Credentials: true");
 }
