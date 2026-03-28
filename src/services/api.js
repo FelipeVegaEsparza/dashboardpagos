@@ -293,6 +293,24 @@ class ApiService {
         });
     }
 
+    // ==================== BILLING ENDPOINTS ====================
+
+    async getBillingSubscriptions(type = 'all') {
+        const response = await this.get(`/billing.php?type=${type}`);
+        return response.data || response;
+    }
+
+    async sendBillingEmail(subscriptionId, template = 'reminder', customMessage = null) {
+        const data = {
+            subscription_id: subscriptionId,
+            template: template
+        };
+        if (customMessage) {
+            data.custom_message = customMessage;
+        }
+        return this.post('/billing.php', data);
+    }
+
     // ==================== DASHBOARD ENDPOINTS ====================
 
     async getDashboard() {

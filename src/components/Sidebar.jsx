@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { House, Users, Package, CreditCard, SignOut, User, Gear, ListChecks } from 'phosphor-react';
+import { House, Users, Package, CreditCard, SignOut, User, Gear, ListChecks, Envelope } from 'phosphor-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Sidebar = () => {
@@ -17,6 +17,7 @@ const Sidebar = () => {
         { path: '/services', icon: <Package size={20} />, label: 'Servicios' },
         { path: '/subscriptions', icon: <ListChecks size={20} />, label: 'Suscripciones' },
         { path: '/payments', icon: <CreditCard size={20} />, label: 'Pagos' },
+        { path: '/billing', icon: <Envelope size={20} />, label: 'Cobranza' },
         { path: '/settings', icon: <Gear size={20} />, label: 'Configuración' },
     ];
 
