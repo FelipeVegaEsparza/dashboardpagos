@@ -269,7 +269,13 @@ function sendViaPHPMailer($host, $port, $username, $password, $fromEmail, $fromN
         $mail->SMTPAuth = true;
         $mail->Username = $username;
         $mail->Password = $password;
-        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        
+        // Use SSL for port 465, STARTTLS for 587
+        if ($port == 465) {
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+        } else {
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        }
         $mail->Port = $port;
         $mail->CharSet = 'UTF-8';
         
