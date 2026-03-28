@@ -177,13 +177,6 @@ const Subscriptions = () => {
         if (diffDays <= 7) return { status: 'soon', label: `Vence en ${diffDays} días`, color: '#eab308' };
         return { status: 'ok', label: 'Al día', color: '#22c55e' };
     };
-        } catch (error) {
-            console.error(error);
-            setPaymentHistory([]);
-        } finally {
-            setLoadingHistory(false);
-        }
-    };
 
     const handleCancelSubscription = (sub) => {
         const message = sub.status === 'active' 
