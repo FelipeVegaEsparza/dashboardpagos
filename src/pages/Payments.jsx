@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
@@ -8,10 +9,14 @@ import { formatCurrency } from '../utils/format';
 import { Plus, CurrencyDollar, Calendar, User, CheckCircle } from 'phosphor-react';
 
 const Payments = () => {
+    const location = useLocation();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const { modal, showSuccess, showError, closeModal } = useModal();
+    
+    // Check for preselected subscription from navigation
+    const preselectedSub = location.state?.preselectedSubscription;
 
     // Filters
     const [filterClient, setFilterClient] = useState('');
@@ -36,7 +41,19 @@ const Payments = () => {
         fetchPayments();
         fetchClients();
         fetchSubscriptions();
-    }, []);
+        
+        // If coming from subscriptions with preselected subscription, open payment modal
+        if (preselectedSub) {
+            setSelectedClient(preselectedSub.client_id.toString());
+            setSelectedSubscription(preselectedSub.id.toString());
+            setPaymentData({
+                amount: preselectedSub.price || '',
+                date: new Date().toISOString().split('T')[0],
+                receipt: null
+            });
+            setShowPaymentModal(true);
+        }
+    }, [preselectedSub]);
 
     const fetchPayments = async () => {
         try {
