@@ -1,27 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { useModal } from '../hooks/useModal';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/format';
-import { Plus, Trash, CheckCircle, XCircle, CurrencyDollar, ClockCounterClockwise, Prohibit, WhatsappLogo } from 'phosphor-react';
+import { Plus, CurrencyDollar, Prohibit, WhatsappLogo } from 'phosphor-react';
 
 const Subscriptions = () => {
-    const { modal, showSuccess, showError, showConfirm, showDelete, closeModal } = useModal();
+    const { modal, showSuccess, showError, showDelete, closeModal } = useModal();
     const [subscriptions, setSubscriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-
-    // Payment Modal State
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [selectedSubForPayment, setSelectedSubForPayment] = useState(null);
-    const [paymentData, setPaymentData] = useState({ amount: '', date: new Date().toISOString().split('T')[0], receipt: null });
-
-    // History Modal State
-    const [showHistoryModal, setShowHistoryModal] = useState(false);
-    const [paymentHistory, setPaymentHistory] = useState([]);
-    const [loadingHistory, setLoadingHistory] = useState(false);
 
     // Filters
     const [filterService, setFilterService] = useState('');
@@ -165,38 +156,11 @@ const Subscriptions = () => {
         }
     };
 
-    const openPaymentModal = (sub) => {
-        setSelectedSubForPayment(sub);
-        setPaymentData({
-            amount: sub.price,
-            date: new Date().toISOString().split('T')[0],
-            receipt: null
-        });
-        setShowPaymentModal(true);
-    };
+    const navigate = useNavigate();
 
-    const handleRegisterPayment = async (e) => {
-        e.preventDefault();
-        if (!selectedSubForPayment) return;
-
-        try {
-            const formData = new FormData();
-            formData.append('subscription_id', selectedSubForPayment.id);
-            formData.append('amount', paymentData.amount);
-            formData.append('date', paymentData.date);
-            if (paymentData.receipt) {
-                formData.append('receipt', paymentData.receipt);
-            }
-
-            await api.createPayment(formData);
-            setShowPaymentModal(false);
-            setSelectedSubForPayment(null);
-            fetchSubscriptions(); // Refresh to see updated dates
-            showSuccess('¡Pago registrado!', 'El pago se ha registrado correctamente.');
-        } catch (error) {
-            console.error(error);
-            showError('Error', 'No se pudo registrar el pago: ' + (error.message || 'Error desconocido'));
-        }
+    const handleRegisterPaymentClick = (sub) => {
+        // Redirigir a la página de pagos con el ID de la suscripción pre-seleccionada
+        navigate('/payments', { state: { preselectedSubscription: sub } });
     };
 
     const getPaymentStatus = (dateString) => {
@@ -213,14 +177,6 @@ const Subscriptions = () => {
         if (diffDays <= 7) return { status: 'soon', label: `Vence en ${diffDays} días`, color: '#eab308' };
         return { status: 'ok', label: 'Al día', color: '#22c55e' };
     };
-
-    const openHistoryModal = async (sub) => {
-        setSelectedSubForPayment(sub);
-        setShowHistoryModal(true);
-        setLoadingHistory(true);
-        try {
-            const response = await api.getPayments(sub.id);
-            setPaymentHistory(response.items || response || []);
         } catch (error) {
             console.error(error);
             setPaymentHistory([]);
@@ -396,10 +352,7 @@ const Subscriptions = () => {
                                     </p>
                                 </div>
                                 <div className="flex gap-2" style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <Button variant="secondary" onClick={() => openHistoryModal(sub)} title="Ver Historial">
-                                        <ClockCounterClockwise size={18} />
-                                    </Button>
-                                    <Button variant="secondary" onClick={() => openPaymentModal(sub)} title="Registrar Pago">
+                                    <Button variant="secondary" onClick={() => handleRegisterPaymentClick(sub)} title="Registrar Pago">
                                         <CurrencyDollar size={18} /> Pagar
                                     </Button>
                                     {sub.status === 'active' && (
@@ -513,128 +466,6 @@ const Subscriptions = () => {
                                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar'}</Button>
                             </div>
                         </form>
-                    </Card>
-                </div>
-            )}
-
-            {showPaymentModal && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)',
-                    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-                }}>
-                    <Card className="w-full max-w-md" style={{ width: '100%', maxWidth: '400px' }} title="Registrar Pago">
-                        <form onSubmit={handleRegisterPayment} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <p className="text-sm text-muted">
-                                Registrando pago para <strong>{selectedSubForPayment?.client_name}</strong>
-                            </p>
-
-                            <div>
-                                <label className="text-sm text-muted mb-1 block">Monto</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={paymentData.amount}
-                                    onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })}
-                                    required
-                                    style={{ width: '100%', padding: '0.5rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--border)', borderRadius: '4px', color: 'white' }}
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-sm text-muted mb-1 block">Fecha del Pago</label>
-                                <input
-                                    type="date"
-                                    value={paymentData.date}
-                                    onChange={e => setPaymentData({ ...paymentData, date: e.target.value })}
-                                    required
-                                    style={{ width: '100%', padding: '0.5rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--border)', borderRadius: '4px', color: 'white' }}
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-sm text-muted mb-1 block">Comprobante (Opcional)</label>
-                                <input
-                                    type="file"
-                                    accept="image/*,application/pdf"
-                                    onChange={e => setPaymentData({ ...paymentData, receipt: e.target.files[0] })}
-                                    style={{ width: '100%', padding: '0.5rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--border)', borderRadius: '4px', color: 'white' }}
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-2 mt-4" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-                                <Button variant="secondary" onClick={() => setShowPaymentModal(false)}>Cancelar</Button>
-                                <Button type="submit">Registrar</Button>
-                            </div>
-                        </form>
-                    </Card>
-                </div>
-            )}
-
-            {showHistoryModal && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)',
-                    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-                }}>
-                    <Card className="w-full max-w-md" style={{ width: '100%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }} title={`Historial de Pagos - ${selectedSubForPayment?.client_name}`}>
-                        {loadingHistory ? (
-                            <p>Cargando historial...</p>
-                        ) : (
-                            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Fecha</th>
-                                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Monto</th>
-                                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Estado</th>
-                                        <th style={{ textAlign: 'left', padding: '0.5rem' }}>Comprobante</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {paymentHistory.map(payment => (
-                                        <tr key={payment.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <td style={{ padding: '0.5rem' }}>{payment.date}</td>
-                                            <td style={{ padding: '0.5rem' }}>{formatCurrency(payment.amount)}</td>
-                                            <td style={{ padding: '0.5rem' }}>
-                                                <span style={{
-                                                    fontSize: '0.75rem',
-                                                    padding: '0.1rem 0.5rem',
-                                                    borderRadius: '1rem',
-                                                    background: payment.status === 'paid' ? '#22c55e20' : '#ef444420',
-                                                    color: payment.status === 'paid' ? '#22c55e' : '#ef4444'
-                                                }}>
-                                                    {payment.status === 'paid' ? 'Pagado' : payment.status}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '0.5rem' }}>
-                                                {payment.receipt_url ? (
-                                                    <a
-                                                        href={payment.receipt_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        style={{ color: 'var(--primary)', textDecoration: 'underline', fontSize: '0.875rem' }}
-                                                    >
-                                                        Ver
-                                                    </a>
-                                                ) : (
-                                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>-</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {paymentHistory.length === 0 && (
-                                        <tr>
-                                            <td colSpan="4" style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                                No hay pagos registrados.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        )}
-                        <div className="flex justify-end mt-4" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                            <Button variant="secondary" onClick={() => setShowHistoryModal(false)}>Cerrar</Button>
-                        </div>
                     </Card>
                 </div>
             )}
