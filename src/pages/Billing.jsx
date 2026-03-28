@@ -12,7 +12,8 @@ import {
     CheckCircle, 
     Clock, 
     PaperPlaneTilt,
-    Spinner
+    Spinner,
+    WhatsappLogo
 } from 'phosphor-react';
 
 const Billing = () => {
@@ -193,6 +194,25 @@ const Billing = () => {
                         )}
                         Enviar
                     </Button>
+                    {sub.client_phone && (
+                        <Button 
+                            variant="secondary" 
+                            onClick={() => {
+                                const phone = sub.client_phone.replace(/\D/g, '');
+                                const message = `Hola ${sub.client_name}, te escribo sobre tu suscripción a ${sub.service_name} - ${sub.product_name}. El pago vence el ${sub.next_payment_date}.`;
+                                const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                                window.open(whatsappUrl, '_blank');
+                            }}
+                            title="Contactar por WhatsApp"
+                            style={{ 
+                                background: 'rgba(37, 211, 102, 0.1)', 
+                                borderColor: 'rgba(37, 211, 102, 0.3)',
+                                color: '#25d366'
+                            }}
+                        >
+                            <WhatsappLogo size={18} />
+                        </Button>
+                    )}
                 </div>
             </Card>
         );
