@@ -3,7 +3,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/format';
-import { Plus, Trash, CheckCircle, XCircle, CurrencyDollar, ClockCounterClockwise } from 'phosphor-react';
+import { Plus, Trash, CheckCircle, XCircle, CurrencyDollar, ClockCounterClockwise, Prohibit } from 'phosphor-react';
 
 const Subscriptions = () => {
     const [subscriptions, setSubscriptions] = useState([]);
@@ -222,6 +222,25 @@ const Subscriptions = () => {
         }
     };
 
+    const handleCancelSubscription = async (sub) => {
+        const confirmMessage = sub.status === 'active' 
+            ? `¿Estás seguro de cancelar la suscripción de "${sub.client_name}" para "${sub.product_name}"?\n\nEsta acción no eliminará el historial de pagos, pero la suscripción ya no estará activa.`
+            : `¿Estás seguro de eliminar la suscripción de "${sub.client_name}"?`;
+        
+        if (!window.confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            await api.deleteSubscription(sub.id);
+            alert('Suscripción cancelada correctamente');
+            fetchSubscriptions(); // Recargar la lista
+        } catch (error) {
+            console.error('Error canceling subscription:', error);
+            alert('Error al cancelar la suscripción: ' + (error.message || 'Error desconocido'));
+        }
+    };
+
     const filteredSubscriptions = subscriptions.filter(sub => {
         const statusInfo = getPaymentStatus(sub.next_payment_date);
         const matchesService = filterService ? sub.service_name === filterService : true;
@@ -374,6 +393,20 @@ const Subscriptions = () => {
                                     <Button variant="secondary" onClick={() => openPaymentModal(sub)} title="Registrar Pago">
                                         <CurrencyDollar size={18} /> Pagar
                                     </Button>
+                                    {sub.status === 'active' && (
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={() => handleCancelSubscription(sub)} 
+                                            title="Cancelar Suscripción"
+                                            style={{ 
+                                                background: 'rgba(239, 68, 68, 0.1)', 
+                                                borderColor: 'rgba(239, 68, 68, 0.3)',
+                                                color: '#ef4444'
+                                            }}
+                                        >
+                                            <Prohibit size={18} />
+                                        </Button>
+                                    )}
                                 </div>
                             </Card>
                         );
