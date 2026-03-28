@@ -72,7 +72,7 @@ function handleGet(PDO $pdo): void {
         $sql = "
             SELECT 
                 s.id, s.client_id, s.product_id, s.start_date, 
-                s.next_payment_date, s.status,
+                s.next_payment_date, s.status, s.last_email_sent,
                 c.name as client_name, c.email as client_email, c.phone as client_phone,
                 p.name as product_name, p.price, p.billing_cycle,
                 serv.name as service_name
@@ -139,10 +139,10 @@ function handlePost(PDO $pdo): void {
     $customMessage = $data['custom_message'] ?? null;
     
     try {
-        // Get subscription details
+        // Get subscription details with last email sent
         $stmt = $pdo->prepare("
             SELECT 
-                s.id, s.next_payment_date,
+                s.id, s.next_payment_date, s.last_email_sent,
                 c.name as client_name, c.email as client_email,
                 p.name as product_name, p.price,
                 serv.name as service_name
@@ -165,11 +165,26 @@ function handlePost(PDO $pdo): void {
             return;
         }
         
+        // Check if email was already sent today
+        if ($subscription['last_email_sent']) {
+            $lastSent = strtotime($subscription['last_email_sent']);
+            $today = strtotime(date('Y-m-d'));
+            
+            if ($lastSent >= $today) {
+                ApiResponse::error('Ya se envió un email a este cliente hoy. Espere hasta mañana para enviar otro.', 429);
+                return;
+            }
+        }
+        
         // Send email
         $result = sendBillingEmail($subscription, $template, $customMessage);
         
         if ($result['success']) {
-            // Log the email sent (optional)
+            // Update last_email_sent timestamp
+            $updateStmt = $pdo->prepare("UPDATE subscriptions SET last_email_sent = NOW() WHERE id = ?");
+            $updateStmt->execute([$subscriptionId]);
+            
+            // Log the email sent
             logEmailSent($pdo, $subscriptionId, $subscription['client_email'], $template);
             
             ApiResponse::success([

@@ -9,7 +9,6 @@ import Subscriptions from './pages/Subscriptions';
 import CancelledSubscriptions from './pages/CancelledSubscriptions';
 import Payments from './pages/Payments';
 import Billing from './pages/Billing';
-import EmailConversations from './pages/EmailConversations';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 
@@ -138,14 +137,6 @@ const App = () => {
                         element={
                             <AuthenticatedLayout>
                                 <Billing />
-                            </AuthenticatedLayout>
-                        } 
-                    />
-                    <Route 
-                        path="/conversations" 
-                        element={
-                            <AuthenticatedLayout>
-                                <EmailConversations />
                             </AuthenticatedLayout>
                         } 
                     />

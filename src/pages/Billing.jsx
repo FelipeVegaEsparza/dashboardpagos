@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
@@ -13,12 +12,10 @@ import {
     CheckCircle, 
     Clock, 
     PaperPlaneTilt,
-    Spinner,
-    Tray
+    Spinner
 } from 'phosphor-react';
 
 const Billing = () => {
-    const navigate = useNavigate();
     const { modal, showSuccess, showError, showConfirm, closeModal } = useModal();
     const [subscriptions, setSubscriptions] = useState({
         overdue: [],
@@ -167,6 +164,11 @@ const Billing = () => {
                             {sub.client_email && (
                                 <span style={{ marginLeft: '0.5rem' }}>• {sub.client_email}</span>
                             )}
+                            {sub.last_email_sent && (
+                                <span style={{ marginLeft: '0.5rem', color: '#eab308' }}>
+                                    • 📧 Email enviado: {new Date(sub.last_email_sent).toLocaleDateString('es-ES')}
+                                </span>
+                            )}
                         </p>
                     </div>
                 </div>
@@ -205,18 +207,9 @@ const Billing = () => {
                         Gestiona recordatorios de pago para suscripciones próximas a vencer o vencidas
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <Button 
-                        variant="secondary" 
-                        onClick={() => navigate('/conversations')}
-                        title="Bandeja de entrada"
-                    >
-                        <Tray size={18} /> Bandeja
-                    </Button>
-                    <Button onClick={fetchBillingData} variant="secondary">
-                        <Spinner size={18} /> Actualizar
-                    </Button>
-                </div>
+                <Button onClick={fetchBillingData} variant="secondary">
+                    <Spinner size={18} /> Actualizar
+                </Button>
             </div>
 
             {/* Summary Cards */}
