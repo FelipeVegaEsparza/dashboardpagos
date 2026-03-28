@@ -101,12 +101,26 @@ const Subscriptions = () => {
             return;
         }
         
+        // Verificar si ya existe una suscripción activa para este cliente/producto
+        const clientId = parseInt(newSubscription.client_id);
+        const productId = parseInt(newSubscription.product_id);
+        
+        const existingSubscription = subscriptions.find(
+            sub => sub.client_id === clientId && 
+                   sub.product_id === productId && 
+                   sub.status === 'active'
+        );
+        
+        if (existingSubscription) {
+            alert('⚠️ Este cliente ya tiene una suscripción activa para este producto.\n\nNo se pueden crear suscripciones duplicadas. Si necesitas renovar o modificar la suscripción existente, por favor usa la función de editar.');
+            return;
+        }
+        
         setIsSubmitting(true);
         try {
-            // Convertir IDs a números
             const payload = {
-                client_id: parseInt(newSubscription.client_id),
-                product_id: parseInt(newSubscription.product_id),
+                client_id: clientId,
+                product_id: productId,
                 start_date: newSubscription.start_date
             };
             console.log('Creating subscription with payload:', payload);
