@@ -319,6 +319,11 @@ class ApiService {
         return response.data || response;
     }
 
+    async getDiagnostics() {
+        const response = await this.get('/diagnostics.php');
+        return response.data || response;
+    }
+
     async fetchNewEmails() {
         return this.get('/conversations.php?action=fetch');
     }

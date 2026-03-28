@@ -159,11 +159,11 @@ function fetchNewEmails(PDO $pdo): void {
         return;
     }
     
-    $imapHost = getenv('IMAP_HOST');
-    $imapPort = (int)(getenv('IMAP_PORT') ?: 993);
-    $imapUser = getenv('IMAP_USER');
-    $imapPass = getenv('IMAP_PASS');
-    $imapSSL = filter_var(getenv('IMAP_SSL') ?? 'true', FILTER_VALIDATE_BOOLEAN);
+    $imapHost = env('IMAP_HOST');
+    $imapPort = (int)(env('IMAP_PORT', 993));
+    $imapUser = env('IMAP_USER');
+    $imapPass = env('IMAP_PASS');
+    $imapSSL = filter_var(env('IMAP_SSL', 'true'), FILTER_VALIDATE_BOOLEAN);
     
     if (!$imapHost || !$imapUser || !$imapPass) {
         ApiResponse::error('IMAP not configured', 500);
@@ -246,7 +246,7 @@ function fetchNewEmails(PDO $pdo): void {
                             $subject,
                             strip_tags($body),
                             $from,
-                            getenv('IMAP_USER')
+                            env('IMAP_USER')
                         ]);
                         
                         $imported++;
@@ -315,12 +315,12 @@ function sendReply(PDO $pdo, array $data): void {
         // Send email (reuse SMTP from billing)
         require_once 'billing.php';
         
-        $smtpHost = getenv('SMTP_HOST');
-        $smtpPort = (int)(getenv('SMTP_PORT') ?: 587);
-        $smtpUser = getenv('SMTP_USER');
-        $smtpPass = getenv('SMTP_PASS');
-        $fromName = getenv('SMTP_FROM_NAME') ?: 'Payments Dashboard';
-        $fromEmail = getenv('SMTP_FROM_EMAIL') ?: $smtpUser;
+        $smtpHost = env('SMTP_HOST');
+        $smtpPort = (int)(env('SMTP_PORT', 587));
+        $smtpUser = env('SMTP_USER');
+        $smtpPass = env('SMTP_PASS');
+        $fromName = env('SMTP_FROM_NAME', 'Payments Dashboard');
+        $fromEmail = env('SMTP_FROM_EMAIL', $smtpUser);
         
         global $phpmailer_available;
         

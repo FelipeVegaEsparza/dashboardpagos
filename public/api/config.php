@@ -4,8 +4,26 @@
  * Centralized CORS, database connection, and utility functions
  */
 
+// Helper function to read environment variables from multiple sources
+function env($key, $default = null) {
+    // Try getenv() first
+    $value = getenv($key);
+    if ($value !== false && $value !== '') {
+        return $value;
+    }
+    // Try $_ENV
+    if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
+        return $_ENV[$key];
+    }
+    // Try $_SERVER
+    if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+        return $_SERVER[$key];
+    }
+    return $default;
+}
+
 // Error handling - don't expose sensitive info in production
-$isProduction = getenv('ENVIRONMENT') === 'production';
+$isProduction = env('ENVIRONMENT') === 'production';
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/error.log');

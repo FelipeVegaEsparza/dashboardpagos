@@ -191,12 +191,12 @@ function handlePost(PDO $pdo): void {
  * Send billing email using SMTP
  */
 function sendBillingEmail(array $subscription, string $template, ?string $customMessage): array {
-    $smtpHost = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
-    $smtpPort = (int)(getenv('SMTP_PORT') ?: 587);
-    $smtpUser = getenv('SMTP_USER');
-    $smtpPass = getenv('SMTP_PASS');
-    $fromName = getenv('SMTP_FROM_NAME') ?: 'Payments Dashboard';
-    $fromEmail = getenv('SMTP_FROM_EMAIL') ?: $smtpUser;
+    $smtpHost = env('SMTP_HOST', 'smtp.gmail.com');
+    $smtpPort = (int)(env('SMTP_PORT', 587));
+    $smtpUser = env('SMTP_USER');
+    $smtpPass = env('SMTP_PASS');
+    $fromName = env('SMTP_FROM_NAME', 'Payments Dashboard');
+    $fromEmail = env('SMTP_FROM_EMAIL', $smtpUser);
     
     if (!$smtpUser || !$smtpPass) {
         return ['success' => false, 'error' => 'SMTP not configured'];
