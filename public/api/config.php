@@ -6,20 +6,25 @@
 
 // Helper function to read environment variables from multiple sources
 function env($key, $default = null) {
+    $value = null;
+    
     // Try getenv() first
-    $value = getenv($key);
-    if ($value !== false && $value !== '') {
-        return $value;
+    $val = getenv($key);
+    if ($val !== false && $val !== '') {
+        $value = $val;
     }
-    // Try $_ENV
-    if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
-        return $_ENV[$key];
+    
+    // Try $_ENV if not found
+    if ($value === null && isset($_ENV[$key]) && $_ENV[$key] !== '') {
+        $value = $_ENV[$key];
     }
-    // Try $_SERVER
-    if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
-        return $_SERVER[$key];
+    
+    // Try $_SERVER if still not found
+    if ($value === null && isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+        $value = $_SERVER[$key];
     }
-    return $default;
+    
+    return $value !== null ? $value : $default;
 }
 
 // Error handling - don't expose sensitive info in production
