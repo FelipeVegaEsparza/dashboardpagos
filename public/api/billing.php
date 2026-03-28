@@ -69,10 +69,16 @@ function handleGet(PDO $pdo): void {
         
         $whereClause = 'WHERE ' . implode(' AND ', $where);
         
+        // Check if last_email_sent column exists
+        $checkCol = $pdo->query("SHOW COLUMNS FROM subscriptions LIKE 'last_email_sent'");
+        $hasLastEmailSent = $checkCol->fetch() !== false;
+        
+        $lastEmailField = $hasLastEmailSent ? 's.last_email_sent' : 'NULL as last_email_sent';
+        
         $sql = "
             SELECT 
                 s.id, s.client_id, s.product_id, s.start_date, 
-                s.next_payment_date, s.status, s.last_email_sent,
+                s.next_payment_date, s.status, {$lastEmailField},
                 c.name as client_name, c.email as client_email, c.phone as client_phone,
                 p.name as product_name, p.price, p.billing_cycle,
                 serv.name as service_name
@@ -139,10 +145,16 @@ function handlePost(PDO $pdo): void {
     $customMessage = $data['custom_message'] ?? null;
     
     try {
+        // Check if last_email_sent column exists
+        $checkCol = $pdo->query("SHOW COLUMNS FROM subscriptions LIKE 'last_email_sent'");
+        $hasLastEmailSent = $checkCol->fetch() !== false;
+        
+        $lastEmailField = $hasLastEmailSent ? 's.last_email_sent' : 'NULL as last_email_sent';
+        
         // Get subscription details with last email sent
         $stmt = $pdo->prepare("
             SELECT 
-                s.id, s.next_payment_date, s.last_email_sent,
+                s.id, s.next_payment_date, {$lastEmailField},
                 c.name as client_name, c.email as client_email,
                 p.name as product_name, p.price,
                 serv.name as service_name
@@ -180,9 +192,14 @@ function handlePost(PDO $pdo): void {
         $result = sendBillingEmail($subscription, $template, $customMessage);
         
         if ($result['success']) {
-            // Update last_email_sent timestamp
-            $updateStmt = $pdo->prepare("UPDATE subscriptions SET last_email_sent = NOW() WHERE id = ?");
-            $updateStmt->execute([$subscriptionId]);
+            // Update last_email_sent timestamp (if column exists)
+            try {
+                $updateStmt = $pdo->prepare("UPDATE subscriptions SET last_email_sent = NOW() WHERE id = ?");
+                $updateStmt->execute([$subscriptionId]);
+            } catch (PDOException $e) {
+                // Column might not exist yet, ignore error
+                error_log('Could not update last_email_sent: ' . $e->getMessage());
+            }
             
             // Log the email sent
             logEmailSent($pdo, $subscriptionId, $subscription['client_email'], $template);
