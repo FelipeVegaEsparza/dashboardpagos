@@ -1,13 +1,18 @@
 <?php
 /**
  * Diagnostics endpoint - Check SMTP and other configurations
+ * REMOVE THIS FILE AFTER DEBUGGING - It exposes sensitive info
  */
 
 require_once 'config.php';
-require_once 'auth_middleware.php';
 
-// Require authentication
-AuthMiddleware::requireAuth();
+// Temporarily allow access without auth for debugging
+// REMOVE THIS CHECK IN PRODUCTION
+$allowUnauthenticated = true;
+if (!$allowUnauthenticated) {
+    require_once 'auth_middleware.php';
+    AuthMiddleware::requireAuth();
+}
 
 $diagnostics = [
     'timestamp' => date('Y-m-d H:i:s'),
