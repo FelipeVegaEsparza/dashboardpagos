@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 import { useModal } from '../hooks/useModal';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/format';
-import { Plus, CurrencyDollar, Prohibit, WhatsappLogo } from 'phosphor-react';
+import { Plus, CurrencyDollar, Prohibit, WhatsappLogo, Trash } from 'phosphor-react';
 
 const Subscriptions = () => {
     const { modal, showSuccess, showError, showDelete, closeModal } = useModal();
@@ -44,7 +44,7 @@ const Subscriptions = () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await api.getSubscriptions({ all: true });
+            const response = await api.getSubscriptions({ status: 'active' });
             console.log('Subscriptions response:', response);
             setSubscriptions(response.items || response || []);
         } catch (error) {
@@ -212,10 +212,19 @@ const Subscriptions = () => {
     return (
         <div>
             <div className="flex justify-between items-center mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h1 className="m-0">Suscripciones</h1>
-                <Button onClick={() => setShowModal(true)}>
-                    <Plus size={20} /> Nueva Suscripción
-                </Button>
+                <h1 className="m-0">Suscripciones Activas</h1>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <Button 
+                        variant="secondary" 
+                        onClick={() => navigate('/subscriptions/cancelled')}
+                        title="Ver suscripciones canceladas"
+                    >
+                        <Trash size={18} /> Canceladas
+                    </Button>
+                    <Button onClick={() => setShowModal(true)}>
+                        <Plus size={20} /> Nueva
+                    </Button>
+                </div>
             </div>
 
             <div style={{

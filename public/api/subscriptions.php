@@ -254,6 +254,7 @@ function handlePut(PDO $pdo): void {
  */
 function handleDelete(PDO $pdo): void {
     $id = InputValidator::int($_GET['id'] ?? null);
+    $permanent = ($_GET['permanent'] ?? '') === 'true';
     
     if (!$id) {
         ApiResponse::error('Subscription ID is required', 400);
@@ -261,20 +262,37 @@ function handleDelete(PDO $pdo): void {
     }
     
     try {
-        // Soft delete by setting status to cancelled
-        $stmt = $pdo->prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?");
-        $stmt->execute([$id]);
-        
-        if ($stmt->rowCount() === 0) {
-            ApiResponse::notFound('Subscription');
-            return;
+        if ($permanent) {
+            // Permanent delete - first delete related payments
+            $stmt = $pdo->prepare("DELETE FROM payments WHERE subscription_id = ?");
+            $stmt->execute([$id]);
+            
+            // Then delete the subscription
+            $stmt = $pdo->prepare("DELETE FROM subscriptions WHERE id = ?");
+            $stmt->execute([$id]);
+            
+            if ($stmt->rowCount() === 0) {
+                ApiResponse::notFound('Subscription');
+                return;
+            }
+            
+            ApiResponse::success(['message' => 'Subscription deleted permanently']);
+        } else {
+            // Soft delete by setting status to cancelled
+            $stmt = $pdo->prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?");
+            $stmt->execute([$id]);
+            
+            if ($stmt->rowCount() === 0) {
+                ApiResponse::notFound('Subscription');
+                return;
+            }
+            
+            ApiResponse::success(['message' => 'Subscription cancelled successfully']);
         }
         
-        ApiResponse::success(['message' => 'Subscription cancelled successfully']);
-        
     } catch (PDOException $e) {
-        error_log('Error cancelling subscription: ' . $e->getMessage());
-        ApiResponse::serverError('Failed to cancel subscription');
+        error_log('Error deleting subscription: ' . $e->getMessage());
+        ApiResponse::serverError('Failed to delete subscription');
     }
 }
 

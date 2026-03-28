@@ -275,6 +275,10 @@ class ApiService {
         return this.delete(`/subscriptions.php?id=${id}`);
     }
 
+    async permanentlyDeleteSubscription(id) {
+        return this.delete(`/subscriptions.php?id=${id}&permanent=true`);
+    }
+
     // ==================== PAYMENT ENDPOINTS ====================
 
     async getPayments(subscriptionId) {
