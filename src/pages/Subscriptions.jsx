@@ -37,6 +37,7 @@ const Subscriptions = () => {
         product_id: '',
         start_date: new Date().toISOString().split('T')[0]
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         fetchSubscriptions();
@@ -93,8 +94,23 @@ const Subscriptions = () => {
 
     const handleCreate = async (e) => {
         e.preventDefault();
+        
+        // Validación básica
+        if (!newSubscription.client_id || !newSubscription.product_id || !newSubscription.start_date) {
+            alert('Por favor completa todos los campos');
+            return;
+        }
+        
+        setIsSubmitting(true);
         try {
-            await api.createSubscription(newSubscription);
+            // Convertir IDs a números
+            const payload = {
+                client_id: parseInt(newSubscription.client_id),
+                product_id: parseInt(newSubscription.product_id),
+                start_date: newSubscription.start_date
+            };
+            console.log('Creating subscription with payload:', payload);
+            await api.createSubscription(payload);
             setShowModal(false);
             setNewSubscription({
                 client_id: '',
@@ -104,7 +120,10 @@ const Subscriptions = () => {
             setSelectedServiceId('');
             fetchSubscriptions();
         } catch (error) {
-            console.error(error);
+            console.error('Error creating subscription:', error);
+            alert('Error al crear suscripción: ' + (error.message || 'Error desconocido'));
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -162,8 +181,7 @@ const Subscriptions = () => {
         setLoadingHistory(true);
         try {
             const response = await api.getPayments(sub.id);
-            setPaymentHistory(response.items || response);
-            setPaymentHistory(data);
+            setPaymentHistory(response.items || response || []);
         } catch (error) {
             console.error(error);
             setPaymentHistory([]);
@@ -369,8 +387,8 @@ const Subscriptions = () => {
                             </div>
 
                             <div className="flex justify-end gap-2 mt-4" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-                                <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
-                                <Button type="submit">Guardar</Button>
+                                <Button type="button" variant="secondary" onClick={() => setShowModal(false)} disabled={isSubmitting}>Cancelar</Button>
+                                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar'}</Button>
                             </div>
                         </form>
                     </Card>
