@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import Modal from '../components/Modal';
+import { useModal } from '../hooks/useModal';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/format';
 import { Plus, Trash, CheckCircle, XCircle, CurrencyDollar, ClockCounterClockwise, Prohibit } from 'phosphor-react';
 
 const Subscriptions = () => {
+    const { modal, showSuccess, showError, showConfirm, showDelete, closeModal } = useModal();
     const [subscriptions, setSubscriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -101,7 +104,7 @@ const Subscriptions = () => {
         
         // Validación básica
         if (!newSubscription.client_id || !newSubscription.product_id || !newSubscription.start_date) {
-            alert('Por favor completa todos los campos');
+            showError('Campos incompletos', 'Por favor completa todos los campos requeridos.');
             return;
         }
         
@@ -116,7 +119,9 @@ const Subscriptions = () => {
         );
         
         if (existingSubscription) {
-            alert('⚠️ Este cliente ya tiene una suscripción activa para este producto.\n\nNo se pueden crear suscripciones duplicadas. Si necesitas renovar o modificar la suscripción existente, por favor usa la función de editar.');
+            showWarning('Suscripción duplicada', 
+                'Este cliente ya tiene una suscripción activa para este producto.\n\nNo se pueden crear suscripciones duplicadas. Si necesitas renovar o modificar la suscripción existente, usa la función de editar.'
+            );
             return;
         }
         
@@ -137,6 +142,7 @@ const Subscriptions = () => {
             });
             setSelectedServiceId('');
             fetchSubscriptions();
+            showSuccess('¡Suscripción creada!', 'La suscripción se ha creado correctamente.');
         } catch (error) {
             console.error('Error creating subscription:', error);
             
@@ -153,7 +159,7 @@ const Subscriptions = () => {
                 errorMessage = 'Por favor verifica que todos los datos sean correctos.';
             }
             
-            alert('No se pudo crear la suscripción:\n\n' + errorMessage);
+            showError('Error al crear suscripción', errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -186,9 +192,10 @@ const Subscriptions = () => {
             setShowPaymentModal(false);
             setSelectedSubForPayment(null);
             fetchSubscriptions(); // Refresh to see updated dates
+            showSuccess('¡Pago registrado!', 'El pago se ha registrado correctamente.');
         } catch (error) {
             console.error(error);
-            alert('Error al registrar el pago');
+            showError('Error', 'No se pudo registrar el pago: ' + (error.message || 'Error desconocido'));
         }
     };
 
@@ -222,23 +229,25 @@ const Subscriptions = () => {
         }
     };
 
-    const handleCancelSubscription = async (sub) => {
-        const confirmMessage = sub.status === 'active' 
+    const handleCancelSubscription = (sub) => {
+        const message = sub.status === 'active' 
             ? `¿Estás seguro de cancelar la suscripción de "${sub.client_name}" para "${sub.product_name}"?\n\nEsta acción no eliminará el historial de pagos, pero la suscripción ya no estará activa.`
             : `¿Estás seguro de eliminar la suscripción de "${sub.client_name}"?`;
         
-        if (!window.confirm(confirmMessage)) {
-            return;
-        }
-
-        try {
-            await api.deleteSubscription(sub.id);
-            alert('Suscripción cancelada correctamente');
-            fetchSubscriptions(); // Recargar la lista
-        } catch (error) {
-            console.error('Error canceling subscription:', error);
-            alert('Error al cancelar la suscripción: ' + (error.message || 'Error desconocido'));
-        }
+        showDelete(
+            '¿Cancelar suscripción?',
+            message,
+            async () => {
+                try {
+                    await api.deleteSubscription(sub.id);
+                    showSuccess('Suscripción cancelada', 'La suscripción se ha cancelado correctamente.');
+                    fetchSubscriptions(); // Recargar la lista
+                } catch (error) {
+                    console.error('Error canceling subscription:', error);
+                    showError('Error', 'No se pudo cancelar la suscripción: ' + (error.message || 'Error desconocido'));
+                }
+            }
+        );
     };
 
     const filteredSubscriptions = subscriptions.filter(sub => {
@@ -610,6 +619,19 @@ const Subscriptions = () => {
                     </Card>
                 </div>
             )}
+
+            {/* Modal de notificaciones personalizadas */}
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={closeModal}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                onConfirm={modal.onConfirm}
+                confirmText={modal.confirmText}
+                cancelText={modal.cancelText}
+                confirmVariant={modal.confirmVariant}
+            />
         </div>
     );
 };
