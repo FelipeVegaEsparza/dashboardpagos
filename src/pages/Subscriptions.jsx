@@ -121,7 +121,21 @@ const Subscriptions = () => {
             fetchSubscriptions();
         } catch (error) {
             console.error('Error creating subscription:', error);
-            alert('Error al crear suscripción: ' + (error.message || 'Error desconocido'));
+            
+            // Mensajes de error más amigables
+            let errorMessage = error.message || 'Error desconocido';
+            
+            if (errorMessage.includes('already has an active subscription')) {
+                errorMessage = 'Este cliente ya tiene una suscripción activa para este producto. No se pueden crear suscripciones duplicadas.';
+            } else if (errorMessage.includes('Client not found')) {
+                errorMessage = 'El cliente seleccionado no existe.';
+            } else if (errorMessage.includes('Product not found')) {
+                errorMessage = 'El producto seleccionado no existe.';
+            } else if (errorMessage.includes('Validation failed')) {
+                errorMessage = 'Por favor verifica que todos los datos sean correctos.';
+            }
+            
+            alert('No se pudo crear la suscripción:\n\n' + errorMessage);
         } finally {
             setIsSubmitting(false);
         }
