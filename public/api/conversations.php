@@ -10,8 +10,8 @@ require_once 'auth_middleware.php';
 // Require authentication
 AuthMiddleware::requireAuth();
 
-// Check if IMAP extension is available
-$imap_available = extension_loaded('imap');
+// Check if IMAP extension is available (optional - for native IMAP)
+$imap_available = extension_loaded('imap') || class_exists('PHPMailer\PHPMailer\PHPMailer');
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -144,8 +144,21 @@ function listConversations(PDO $pdo): void {
 
 /**
  * Fetch new emails from IMAP server
+ * Note: Requires PHP IMAP extension or manual webhook setup
  */
 function fetchNewEmails(PDO $pdo): void {
+    // Check if native IMAP extension is available
+    if (!extension_loaded('imap')) {
+        // Alternative: Use email forwarding/webhook approach
+        // For now, return instructions
+        ApiResponse::success([
+            'message' => 'IMAP extension not available in this environment',
+            'note' => 'To enable automatic email fetching, either:\n1. Enable PHP IMAP extension on server\n2. Set up email forwarding to a webhook\n3. Use manual email import',
+            'imap_available' => false
+        ]);
+        return;
+    }
+    
     $imapHost = getenv('IMAP_HOST');
     $imapPort = (int)(getenv('IMAP_PORT') ?: 993);
     $imapUser = getenv('IMAP_USER');

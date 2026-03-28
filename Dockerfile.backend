@@ -1,9 +1,7 @@
 FROM php:8.2-apache
 
 # Install extensions
-RUN apt-get update && apt-get install -y libc-client2007e-dev libkrb5-dev
-RUN docker-php-ext-configure imap --with-kerberos --with-imap-ssl
-RUN docker-php-ext-install pdo pdo_mysql imap
+RUN docker-php-ext-install pdo pdo_mysql
 
 # Enable Apache modules
 RUN a2enmod rewrite headers
