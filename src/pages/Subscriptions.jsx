@@ -38,6 +38,7 @@ const Subscriptions = () => {
         start_date: new Date().toISOString().split('T')[0]
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchSubscriptions();
@@ -48,10 +49,13 @@ const Subscriptions = () => {
     const fetchSubscriptions = async () => {
         try {
             setLoading(true);
+            setError(null);
             const response = await api.getSubscriptions({ all: true });
+            console.log('Subscriptions response:', response);
             setSubscriptions(response.items || response || []);
         } catch (error) {
             console.error('Error fetching subscriptions:', error);
+            setError(error.message || 'Error al cargar suscripciones');
             setSubscriptions([]);
         } finally {
             setLoading(false);
@@ -307,6 +311,35 @@ const Subscriptions = () => {
 
             {loading ? (
                 <p>Cargando...</p>
+            ) : error ? (
+                <div style={{ 
+                    padding: '2rem', 
+                    textAlign: 'center', 
+                    background: 'rgba(239, 68, 68, 0.1)', 
+                    borderRadius: '12px',
+                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                }}>
+                    <p style={{ color: '#ef4444', marginBottom: '1rem' }}>
+                        ⚠️ Error al cargar suscripciones
+                    </p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        {error}
+                    </p>
+                    <button 
+                        onClick={fetchSubscriptions}
+                        style={{
+                            marginTop: '1rem',
+                            padding: '0.5rem 1rem',
+                            background: 'var(--primary)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: 'white',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Reintentar
+                    </button>
+                </div>
             ) : (
                 <div style={{ display: 'grid', gap: '1rem' }}>
                     {filteredSubscriptions.map((sub) => {
