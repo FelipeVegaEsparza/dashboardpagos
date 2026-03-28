@@ -36,6 +36,19 @@ $diagnostics = [
         'IMAP_USER' => env('IMAP_USER') ? '***set***' : 'not set',
         'IMAP_PASS' => env('IMAP_PASS') ? '***set***' : 'not set',
     ],
+    'raw_getenv' => [
+        'SMTP_HOST (getenv)' => getenv('SMTP_HOST') !== false ? getenv('SMTP_HOST') : 'false',
+        'SMTP_USER (getenv)' => getenv('SMTP_USER') !== false ? '***set***' : 'false',
+    ],
+    'raw_env' => [
+        'SMTP_HOST ($_ENV)' => isset($_ENV['SMTP_HOST']) ? $_ENV['SMTP_HOST'] : 'not set',
+        'SMTP_USER ($_ENV)' => isset($_ENV['SMTP_USER']) ? '***set***' : 'not set',
+    ],
+    'raw_server' => [
+        'SMTP_HOST ($_SERVER)' => isset($_SERVER['SMTP_HOST']) ? $_SERVER['SMTP_HOST'] : 'not set',
+        'SMTP_USER ($_SERVER)' => isset($_SERVER['SMTP_USER']) ? '***set***' : 'not set',
+    ],
+    'all_env_keys' => array_filter(array_keys(getenv()), function($k) { return stripos($k, 'smtp') !== false || stripos($k, 'mail') !== false; }),
     'extensions' => [
         'imap' => extension_loaded('imap'),
         'openssl' => extension_loaded('openssl'),
