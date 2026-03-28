@@ -191,12 +191,13 @@ function handlePost(PDO $pdo): void {
  * Send billing email using SMTP
  */
 function sendBillingEmail(array $subscription, string $template, ?string $customMessage): array {
-    $smtpHost = env('SMTP_HOST', 'smtp.gmail.com');
-    $smtpPort = (int)(env('SMTP_PORT', 587));
-    $smtpUser = env('SMTP_USER');
-    $smtpPass = env('SMTP_PASS');
-    $fromName = env('SMTP_FROM_NAME', 'Payments Dashboard');
-    $fromEmail = env('SMTP_FROM_EMAIL', $smtpUser);
+    // Fallback configuration for production (remove after fixing Dokploy env vars)
+    $smtpHost = env('SMTP_HOST') ?: 'mail.somossimple.cl';
+    $smtpPort = (int)(env('SMTP_PORT') ?: 465);
+    $smtpUser = env('SMTP_USER') ?: 'pagos@somossimple.cl';
+    $smtpPass = env('SMTP_PASS') ?: 'simple2026@';
+    $fromName = env('SMTP_FROM_NAME') ?: 'SomosSimple.cl';
+    $fromEmail = env('SMTP_FROM_EMAIL') ?: 'pagos@somossimple.cl';
     
     if (!$smtpUser || !$smtpPass) {
         return ['success' => false, 'error' => 'SMTP not configured'];
