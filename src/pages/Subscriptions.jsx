@@ -5,7 +5,7 @@ import Modal from '../components/Modal';
 import { useModal } from '../hooks/useModal';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/format';
-import { Plus, Trash, CheckCircle, XCircle, CurrencyDollar, ClockCounterClockwise, Prohibit } from 'phosphor-react';
+import { Plus, Trash, CheckCircle, XCircle, CurrencyDollar, ClockCounterClockwise, Prohibit, WhatsappLogo } from 'phosphor-react';
 
 const Subscriptions = () => {
     const { modal, showSuccess, showError, showConfirm, showDelete, closeModal } = useModal();
@@ -414,6 +414,25 @@ const Subscriptions = () => {
                                             }}
                                         >
                                             <Prohibit size={18} />
+                                        </Button>
+                                    )}
+                                    {sub.client_phone && (
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={() => {
+                                                const phone = sub.client_phone.replace(/\D/g, '');
+                                                const message = `Hola ${sub.client_name}, te escribo sobre tu suscripción a ${sub.service_name} - ${sub.product_name}.`;
+                                                const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                                                window.open(whatsappUrl, '_blank');
+                                            }} 
+                                            title="Contactar por WhatsApp"
+                                            style={{ 
+                                                background: 'rgba(37, 211, 102, 0.1)', 
+                                                borderColor: 'rgba(37, 211, 102, 0.3)',
+                                                color: '#25d366'
+                                            }}
+                                        >
+                                            <WhatsappLogo size={18} />
                                         </Button>
                                     )}
                                 </div>

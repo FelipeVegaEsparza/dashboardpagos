@@ -70,7 +70,7 @@ function handleGet(PDO $pdo): void {
             SELECT 
                 s.id, s.client_id, s.product_id, s.start_date, 
                 s.next_payment_date, s.status,
-                c.name as client_name,
+                c.name as client_name, c.phone as client_phone,
                 p.name as product_name, p.price, p.billing_cycle,
                 serv.name as service_name
             FROM subscriptions s
