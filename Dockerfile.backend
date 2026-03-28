@@ -12,6 +12,9 @@ RUN echo 'SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1' >> /etc/apache2/a
 # Copy source code
 COPY public /var/www/html
 
+# Copy vendor for PHPMailer
+COPY vendor /var/www/vendor
+
 # Set permissions (optional but recommended)
 RUN chown -R www-data:www-data /var/www/html
 

@@ -6,6 +6,13 @@
 require_once 'config.php';
 require_once 'auth_middleware.php';
 
+// Include PHPMailer if available
+$phpmailer_available = false;
+if (file_exists('/var/www/vendor/autoload.php')) {
+    require_once '/var/www/vendor/autoload.php';
+    $phpmailer_available = class_exists('PHPMailer\PHPMailer\PHPMailer');
+}
+
 // Require authentication
 AuthMiddleware::requireAuth();
 
@@ -221,6 +228,12 @@ function sendBillingEmail(array $subscription, string $template, ?string $custom
     $subject = $emailContent['subject'];
     $body = $emailContent['body'];
     
+    // Use PHPMailer if available
+    global $phpmailer_available;
+    if ($phpmailer_available) {
+        return sendViaPHPMailer($smtpHost, $smtpPort, $smtpUser, $smtpPass, $fromEmail, $fromName, $to, $subject, $body);
+    }
+    
     // Create email headers
     $headers = "From: {$fromName} <{$fromEmail}>\r\n";
     $headers .= "Reply-To: {$fromEmail}\r\n";
@@ -244,7 +257,41 @@ function sendBillingEmail(array $subscription, string $template, ?string $custom
 }
 
 /**
- * Send email via SMTP
+ * Send email via PHPMailer
+ */
+function sendViaPHPMailer($host, $port, $username, $password, $fromEmail, $fromName, $to, $subject, $body): array {
+    try {
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+        
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host = $host;
+        $mail->SMTPAuth = true;
+        $mail->Username = $username;
+        $mail->Password = $password;
+        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = $port;
+        $mail->CharSet = 'UTF-8';
+        
+        // Recipients
+        $mail->setFrom($fromEmail, $fromName);
+        $mail->addAddress($to);
+        
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body = $body;
+        
+        $mail->send();
+        return ['success' => true];
+    } catch (Exception $e) {
+        error_log('PHPMailer Error: ' . $e->getMessage());
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
+ * Send email via SMTP (manual implementation as fallback)
  */
 function sendViaSMTP($host, $port, $username, $password, $fromEmail, $fromName, $to, $subject, $body): array {
     $timeout = 10;
