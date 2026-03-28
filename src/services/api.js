@@ -311,6 +311,30 @@ class ApiService {
         return this.post('/billing.php', data);
     }
 
+    // ==================== CONVERSATIONS ENDPOINTS ====================
+
+    async getConversations(unreadOnly = false) {
+        const params = unreadOnly ? '?unread_only=true' : '';
+        const response = await this.get(`/conversations.php${params}`);
+        return response.data || response;
+    }
+
+    async fetchNewEmails() {
+        return this.get('/conversations.php?action=fetch');
+    }
+
+    async markConversationAsRead(id) {
+        return this.post('/conversations.php', { action: 'mark_read', id });
+    }
+
+    async sendReply(conversationId, body) {
+        return this.post('/conversations.php', { 
+            action: 'reply', 
+            conversation_id: conversationId, 
+            body 
+        });
+    }
+
     // ==================== DASHBOARD ENDPOINTS ====================
 
     async getDashboard() {
