@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { House, Users, Package, CreditCard, SignOut, User, Gear, ListChecks, Envelope } from 'phosphor-react';
+import { House, Users, Package, CreditCard, SignOut, User, Gear, ListChecks, Envelope, ChartPie } from 'phosphor-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
 
@@ -20,6 +20,7 @@ const Sidebar = () => {
         { path: '/subscriptions', icon: <ListChecks size={20} />, label: 'Suscripciones' },
         { path: '/payments', icon: <CreditCard size={20} />, label: 'Pagos' },
         { path: '/billing', icon: <Envelope size={20} />, label: 'Cobranza' },
+        { path: '/finances', icon: <ChartPie size={20} />, label: 'Finanzas' },
         { path: '/settings', icon: <Gear size={20} />, label: 'Configuración' },
     ];
 

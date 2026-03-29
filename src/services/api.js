@@ -347,6 +347,13 @@ class ApiService {
         return response.data || response;
     }
 
+    // ==================== FINANCES ENDPOINTS ====================
+
+    async getFinances() {
+        const response = await this.get('/finances.php');
+        return response.data || response;
+    }
+
     // ==================== SETTINGS ENDPOINTS ====================
 
     async getSettings() {

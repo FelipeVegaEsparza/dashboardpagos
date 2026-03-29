@@ -9,6 +9,7 @@ import Subscriptions from './pages/Subscriptions';
 import CancelledSubscriptions from './pages/CancelledSubscriptions';
 import Payments from './pages/Payments';
 import Billing from './pages/Billing';
+import Finances from './pages/Finances';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 
@@ -137,6 +138,14 @@ const App = () => {
                         element={
                             <AuthenticatedLayout>
                                 <Billing />
+                            </AuthenticatedLayout>
+                        } 
+                    />
+                    <Route 
+                        path="/finances" 
+                        element={
+                            <AuthenticatedLayout>
+                                <Finances />
                             </AuthenticatedLayout>
                         } 
                     />
