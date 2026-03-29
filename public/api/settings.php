@@ -55,17 +55,23 @@ function handleGet(PDO $pdo): void {
             
             // Convert to key-value format for easier consumption
             $settingsMap = [];
+            $settingsFlat = []; // Flat format for direct access
+            
             foreach ($settings as $setting) {
                 $settingsMap[$setting['setting_key']] = [
                     'value' => $setting['setting_value'],
                     'type' => $setting['setting_type'],
                     'updated_at' => $setting['updated_at']
                 ];
+                // Also add flat value for direct access (e.g., response.app_logo)
+                $settingsFlat[$setting['setting_key']] = $setting['setting_value'];
             }
             
             ApiResponse::success([
                 'items' => $settings,
-                'map' => $settingsMap
+                'map' => $settingsMap,
+                // Merge flat values for direct access in frontend
+                ...$settingsFlat
             ]);
         }
         
