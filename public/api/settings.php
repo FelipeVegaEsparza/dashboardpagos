@@ -1,24 +1,24 @@
 <?php
 /**
- * Settings API Endpoint - Protected with Authentication
+ * Settings API Endpoint
  * Handles application configuration and branding
+ * GET is public, POST requires admin authentication
  */
 
 require_once 'config.php';
 require_once 'auth_middleware.php';
 
-// Require authentication - only admins can modify settings
-$currentUser = AuthMiddleware::requireAuth();
-
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
+        // Public endpoint - no authentication required for reading settings
         handleGet($pdo);
         break;
 
     case 'POST':
         // Only admins can update settings
+        $currentUser = AuthMiddleware::requireAuth();
         if ($currentUser['role'] !== 'admin') {
             ApiResponse::forbidden('Only administrators can modify settings');
         }
