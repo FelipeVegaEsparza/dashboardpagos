@@ -15,8 +15,10 @@ COPY public /var/www/html
 # Copy vendor for PHPMailer
 COPY vendor /var/www/vendor
 
-# Set permissions (optional but recommended)
-RUN chown -R www-data:www-data /var/www/html
+# Create uploads directory and set permissions
+RUN mkdir -p /var/www/html/uploads/branding && \
+    chown -R www-data:www-data /var/www/html && \
+    chmod -R 755 /var/www/html/uploads
 
 # Enable PHP error logging
 RUN echo "error_reporting = E_ALL" >> /usr/local/etc/php/conf.d/error-logging.ini && \
