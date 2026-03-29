@@ -92,12 +92,13 @@ const Login = () => {
                             src={logoUrl} 
                             alt="Logo" 
                             style={{
-                                width: '64px',
-                                height: '64px',
+                                maxWidth: '200px',
+                                maxHeight: '100px',
+                                width: 'auto',
+                                height: 'auto',
                                 margin: '0 auto 1.5rem',
-                                borderRadius: '16px',
                                 objectFit: 'contain',
-                                boxShadow: '0 10px 30px rgba(99, 102, 241, 0.3)'
+                                display: 'block'
                             }}
                             onError={(e) => {
                                 e.target.style.display = 'none';
@@ -113,8 +114,7 @@ const Login = () => {
                         background: 'linear-gradient(135deg, var(--primary), var(--accent))',
                         display: logoUrl ? 'none' : 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 10px 30px rgba(99, 102, 241, 0.3)'
+                        justifyContent: 'center'
                     }}>
                         <Lock size={32} color="white" weight="fill" />
                     </div>
