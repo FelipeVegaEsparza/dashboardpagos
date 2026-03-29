@@ -118,17 +118,20 @@ const Login = () => {
                     }}>
                         <Lock size={32} color="white" weight="fill" />
                     </div>
-                    <h1 style={{
-                        fontSize: '1.75rem',
-                        fontWeight: '600',
-                        color: 'white',
-                        marginBottom: '0.5rem'
-                    }}>
-                        {appName}
-                    </h1>
+                    {!logoUrl && (
+                        <h1 style={{
+                            fontSize: '1.75rem',
+                            fontWeight: '600',
+                            color: 'white',
+                            marginBottom: '0.5rem'
+                        }}>
+                            {appName}
+                        </h1>
+                    )}
                     <p style={{
                         color: 'var(--text-muted)',
-                        fontSize: '0.95rem'
+                        fontSize: '0.95rem',
+                        marginTop: logoUrl ? '1rem' : '0'
                     }}>
                         Ingresa tus credenciales para continuar
                     </p>
