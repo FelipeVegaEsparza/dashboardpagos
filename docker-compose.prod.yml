@@ -39,6 +39,8 @@ services:
       IMAP_USER: ${IMAP_USER}
       IMAP_PASS: ${IMAP_PASS}
       IMAP_SSL: ${IMAP_SSL:-true}
+    volumes:
+      - uploads_data:/var/www/html/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -70,6 +72,7 @@ services:
 
 volumes:
   db_data_prod:
+  uploads_data:
 
 networks:
   dokploy-network:
