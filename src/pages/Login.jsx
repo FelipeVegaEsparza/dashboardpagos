@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { api } from '../services/api';
 import { Lock, User, Eye, EyeSlash } from 'phosphor-react';
 
 const Login = () => {
@@ -9,9 +10,29 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [logoUrl, setLogoUrl] = useState(null);
+    const [appName, setAppName] = useState('Bienvenido');
     
     const { login } = useAuth();
     const navigate = useNavigate();
+
+    // Load settings (logo and app name)
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const response = await api.getSettings();
+                if (response.app_logo) {
+                    setLogoUrl(response.app_logo);
+                }
+                if (response.app_name) {
+                    setAppName(response.app_name);
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        };
+        loadSettings();
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -66,13 +87,31 @@ const Login = () => {
             }}>
                 {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                    {logoUrl ? (
+                        <img 
+                            src={logoUrl} 
+                            alt="Logo" 
+                            style={{
+                                width: '64px',
+                                height: '64px',
+                                margin: '0 auto 1.5rem',
+                                borderRadius: '16px',
+                                objectFit: 'contain',
+                                boxShadow: '0 10px 30px rgba(99, 102, 241, 0.3)'
+                            }}
+                            onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                            }}
+                        />
+                    ) : null}
                     <div style={{
                         width: '64px',
                         height: '64px',
                         margin: '0 auto 1.5rem',
                         borderRadius: '16px',
                         background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-                        display: 'flex',
+                        display: logoUrl ? 'none' : 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         boxShadow: '0 10px 30px rgba(99, 102, 241, 0.3)'
@@ -85,7 +124,7 @@ const Login = () => {
                         color: 'white',
                         marginBottom: '0.5rem'
                     }}>
-                        Bienvenido
+                        {appName}
                     </h1>
                     <p style={{
                         color: 'var(--text-muted)',

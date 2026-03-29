@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { House, Users, Package, CreditCard, SignOut, User, Gear, ListChecks, Envelope } from 'phosphor-react';
 import { useAuth } from '../contexts/AuthContext';
+import { api } from '../services/api';
 
 const Sidebar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [logoUrl, setLogoUrl] = useState('/img/logo.webp');
 
     const isActive = (path) => location.pathname === path;
 
@@ -20,6 +22,22 @@ const Sidebar = () => {
         { path: '/billing', icon: <Envelope size={20} />, label: 'Cobranza' },
         { path: '/settings', icon: <Gear size={20} />, label: 'Configuración' },
     ];
+
+    // Load logo from settings
+    useEffect(() => {
+        const loadLogo = async () => {
+            try {
+                const response = await api.getSettings();
+                if (response.app_logo) {
+                    setLogoUrl(response.app_logo);
+                }
+            } catch (error) {
+                console.error('Error loading logo:', error);
+                // Keep default logo on error
+            }
+        };
+        loadLogo();
+    }, []);
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
@@ -53,7 +71,7 @@ const Sidebar = () => {
                 textAlign: 'center'
             }}>
                 <img
-                    src="/img/logo.webp"
+                    src={logoUrl}
                     alt="Logo"
                     style={{
                         width: '100%',
