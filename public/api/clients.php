@@ -107,16 +107,6 @@ function handlePost(PDO $pdo): void {
     $phone = $data['phone'] ? InputValidator::sanitize($data['phone']) : null;
     
     try {
-        // Check for duplicate email if provided
-        if ($email) {
-            $stmt = $pdo->prepare("SELECT id FROM clients WHERE email = ?");
-            $stmt->execute([$email]);
-            if ($stmt->fetch()) {
-                ApiResponse::error('A client with this email already exists', 409);
-                return;
-            }
-        }
-        
         $stmt = $pdo->prepare("
             INSERT INTO clients (name, email, phone, created_at) 
             VALUES (?, ?, ?, NOW())
@@ -169,16 +159,6 @@ function handlePut(PDO $pdo): void {
         if (!$stmt->fetch()) {
             ApiResponse::notFound('Client');
             return;
-        }
-        
-        // Check for duplicate email (excluding current client)
-        if ($email) {
-            $stmt = $pdo->prepare("SELECT id FROM clients WHERE email = ? AND id != ?");
-            $stmt->execute([$email, $id]);
-            if ($stmt->fetch()) {
-                ApiResponse::error('Another client with this email already exists', 409);
-                return;
-            }
         }
         
         $stmt = $pdo->prepare("
