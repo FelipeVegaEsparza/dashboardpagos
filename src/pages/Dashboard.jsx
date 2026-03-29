@@ -178,6 +178,7 @@ const Dashboard = () => {
                                         color: 'var(--text-muted)' 
                                     }}>
                                         {payment.service_name} - {payment.product_name}
+                                        {payment.project_name && <span style={{ marginLeft: '0.5rem', fontStyle: 'italic' }}>• {payment.project_name}</span>}
                                     </p>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>

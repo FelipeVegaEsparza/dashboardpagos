@@ -59,6 +59,7 @@ try {
             c.name as client_name, 
             p.price, 
             s.next_payment_date, 
+            s.project_name,
             p.name as product_name,
             p.billing_cycle,
             serv.name as service_name,

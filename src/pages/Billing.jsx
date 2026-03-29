@@ -159,6 +159,7 @@ const Billing = () => {
                         </div>
                         <p className="text-sm text-muted" style={{ color: 'var(--text-muted)', margin: '0 0 0.25rem 0' }}>
                             {sub.service_name} - {sub.product_name}
+                            {sub.project_name && <span style={{ marginLeft: '0.5rem', fontStyle: 'italic' }}>• {sub.project_name}</span>}
                         </p>
                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                             <strong>{formatCurrency(sub.price)}</strong> • Vencimiento: <strong>{sub.next_payment_date}</strong>

@@ -74,7 +74,8 @@ const Payments = () => {
                             subscription_id: sub.id,
                             client_name: sub.client_name,
                             service_name: sub.service_name,
-                            product_name: sub.product_name
+                            product_name: sub.product_name,
+                            project_name: sub.project_name
                         });
                     });
                 } catch (e) {
@@ -292,6 +293,7 @@ const Payments = () => {
                                     </div>
                                     <p className="text-sm text-muted" style={{ color: 'var(--text-muted)', margin: '0 0 0.25rem 0' }}>
                                         {payment.service_name} - {payment.product_name}
+                                        {payment.project_name && <span style={{ marginLeft: '0.5rem', fontStyle: 'italic' }}>• {payment.project_name}</span>}
                                     </p>
                                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                         Fecha: <strong>{payment.date}</strong>
@@ -359,7 +361,7 @@ const Payments = () => {
                                     <option value="">Seleccionar Suscripción</option>
                                     {getFilteredSubscriptions().map(sub => (
                                         <option key={sub.id} value={sub.id}>
-                                            {sub.service_name} - {sub.product_name} ({formatCurrency(sub.price)})
+                                            {sub.service_name} - {sub.product_name}{sub.project_name ? ` • ${sub.project_name}` : ''} ({formatCurrency(sub.price)})
                                         </option>
                                     ))}
                                 </select>

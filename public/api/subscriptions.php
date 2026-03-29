@@ -68,7 +68,7 @@ function handleGet(PDO $pdo): void {
         // Get paginated results
         $sql = "
             SELECT 
-                s.id, s.client_id, s.product_id, s.start_date, 
+                s.id, s.client_id, s.product_id, s.project_name, s.start_date, 
                 s.next_payment_date, s.status,
                 c.name as client_name, c.phone as client_phone,
                 p.name as product_name, p.price, p.billing_cycle,
@@ -123,6 +123,7 @@ function handlePost(PDO $pdo): void {
     
     $clientId = (int) $data['client_id'];
     $productId = (int) $data['product_id'];
+    $projectName = !empty($data['project_name']) ? InputValidator::sanitize($data['project_name']) : null;
     $startDate = $data['start_date'];
     
     try {
@@ -165,10 +166,10 @@ function handlePost(PDO $pdo): void {
         
         $stmt = $pdo->prepare("
             INSERT INTO subscriptions 
-            (client_id, product_id, start_date, next_payment_date, status) 
-            VALUES (?, ?, ?, ?, 'active')
+            (client_id, product_id, project_name, start_date, next_payment_date, status) 
+            VALUES (?, ?, ?, ?, ?, 'active')
         ");
-        $stmt->execute([$clientId, $productId, $startDate, $nextPaymentDate]);
+        $stmt->execute([$clientId, $productId, $projectName, $startDate, $nextPaymentDate]);
         
         $id = $pdo->lastInsertId();
         
@@ -178,6 +179,7 @@ function handlePost(PDO $pdo): void {
             'id' => $id,
             'client_id' => $clientId,
             'product_id' => $productId,
+            'project_name' => $projectName,
             'start_date' => $startDate,
             'next_payment_date' => $nextPaymentDate,
             'price' => $product['price'],
@@ -212,6 +214,7 @@ function handlePut(PDO $pdo): void {
     
     $id = (int) $data['id'];
     $status = $data['status'];
+    $projectName = isset($data['project_name']) ? InputValidator::sanitize($data['project_name']) : null;
     $nextPaymentDate = $data['next_payment_date'] ?? null;
     
     try {
@@ -225,6 +228,11 @@ function handlePut(PDO $pdo): void {
         
         $sql = "UPDATE subscriptions SET status = ?";
         $params = [$status];
+        
+        if (isset($data['project_name'])) {
+            $sql .= ", project_name = ?";
+            $params[] = $projectName;
+        }
         
         if ($nextPaymentDate) {
             $sql .= ", next_payment_date = ?";

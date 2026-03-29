@@ -29,6 +29,7 @@ const Subscriptions = () => {
     const [newSubscription, setNewSubscription] = useState({
         client_id: '',
         product_id: '',
+        project_name: '',
         start_date: new Date().toISOString().split('T')[0]
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -121,6 +122,7 @@ const Subscriptions = () => {
             const payload = {
                 client_id: clientId,
                 product_id: productId,
+                project_name: newSubscription.project_name || null,
                 start_date: newSubscription.start_date
             };
             console.log('Creating subscription with payload:', payload);
@@ -129,6 +131,7 @@ const Subscriptions = () => {
             setNewSubscription({
                 client_id: '',
                 product_id: '',
+                project_name: '',
                 start_date: new Date().toISOString().split('T')[0]
             });
             setSelectedServiceId('');
@@ -348,6 +351,7 @@ const Subscriptions = () => {
                                     </div>
                                     <p className="text-sm text-muted" style={{ color: 'var(--text-muted)', margin: '0 0 0.25rem 0' }}>
                                         {sub.service_name} - {sub.product_name} ({formatCurrency(sub.price)})
+                                        {sub.project_name && <span style={{ marginLeft: '0.5rem', fontStyle: 'italic' }}>• {sub.project_name}</span>}
                                     </p>
                                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                         Próximo pago: <strong>{sub.next_payment_date}</strong>
@@ -451,6 +455,17 @@ const Subscriptions = () => {
                                         </option>
                                     ))}
                                 </select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-muted mb-1 block">Nombre del Proyecto</label>
+                                <input
+                                    type="text"
+                                    placeholder="Ej: Tienda Online, App Móvil, etc."
+                                    value={newSubscription.project_name}
+                                    onChange={e => setNewSubscription({ ...newSubscription, project_name: e.target.value })}
+                                    style={{ width: '100%', padding: '0.5rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--border)', borderRadius: '4px', color: 'white' }}
+                                />
                             </div>
 
                             <div>

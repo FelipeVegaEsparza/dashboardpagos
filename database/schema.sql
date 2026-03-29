@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     client_id INT NOT NULL,
     product_id INT NOT NULL,
+    project_name VARCHAR(255),
     start_date DATE NOT NULL,
     next_payment_date DATE NOT NULL,
     status ENUM('active', 'cancelled', 'paused') DEFAULT 'active',
