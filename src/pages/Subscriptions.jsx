@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 import { useModal } from '../hooks/useModal';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/format';
-import { Plus, CurrencyDollar, Prohibit, WhatsappLogo, Trash } from 'phosphor-react';
+import { Plus, CurrencyDollar, Prohibit, WhatsappLogo, Trash, PencilSimple } from 'phosphor-react';
 
 const Subscriptions = () => {
     const { modal, showSuccess, showError, showDelete, closeModal } = useModal();
@@ -34,6 +34,11 @@ const Subscriptions = () => {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
+
+    // Edit modal state
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editForm, setEditForm] = useState({ project_name: '', next_payment_date: '' });
+    const [editingSubscription, setEditingSubscription] = useState(null);
 
     useEffect(() => {
         fetchSubscriptions();
@@ -164,6 +169,46 @@ const Subscriptions = () => {
     const handleRegisterPaymentClick = (sub) => {
         // Redirigir a la página de pagos con el ID de la suscripción pre-seleccionada
         navigate('/payments', { state: { preselectedSubscription: sub } });
+    };
+
+    const openEditModal = (sub) => {
+        setEditingSubscription(sub);
+        setEditForm({
+            project_name: sub.project_name || '',
+            next_payment_date: sub.next_payment_date || ''
+        });
+        setShowEditModal(true);
+    };
+
+    const closeEditModal = () => {
+        setShowEditModal(false);
+        setEditingSubscription(null);
+        setEditForm({ project_name: '', next_payment_date: '' });
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        if (!editingSubscription) return;
+
+        setIsSubmitting(true);
+        try {
+            await api.updateSubscription({
+                id: editingSubscription.id,
+                status: editingSubscription.status,
+                project_name: editForm.project_name || null,
+                next_payment_date: editForm.next_payment_date
+            });
+            setShowEditModal(false);
+            setEditingSubscription(null);
+            setEditForm({ project_name: '', next_payment_date: '' });
+            fetchSubscriptions();
+            showSuccess('¡Suscripción actualizada!', 'Los cambios se guardaron correctamente.');
+        } catch (error) {
+            console.error('Error updating subscription:', error);
+            showError('Error al actualizar', error.message || 'No se pudo guardar los cambios.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const getPaymentStatus = (dateString) => {
@@ -361,6 +406,9 @@ const Subscriptions = () => {
                                     <Button variant="secondary" onClick={() => handleRegisterPaymentClick(sub)} title="Registrar Pago">
                                         <CurrencyDollar size={18} /> Pagar
                                     </Button>
+                                    <Button variant="secondary" onClick={() => openEditModal(sub)} title="Editar Suscripción">
+                                        <PencilSimple size={18} />
+                                    </Button>
                                     {sub.status === 'active' && (
                                         <Button 
                                             variant="secondary" 
@@ -481,6 +529,66 @@ const Subscriptions = () => {
                             <div className="flex justify-end gap-2 mt-4" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
                                 <Button type="button" variant="secondary" onClick={() => setShowModal(false)} disabled={isSubmitting}>Cancelar</Button>
                                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar'}</Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {showEditModal && editingSubscription && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+                }}>
+                    <Card className="w-full max-w-md" style={{ width: '100%', maxWidth: '500px' }} title="Editar Suscripción">
+                        <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+                            <div>
+                                <label className="text-sm text-muted mb-1 block">Cliente</label>
+                                <input
+                                    type="text"
+                                    value={editingSubscription.client_name}
+                                    disabled
+                                    style={{ width: '100%', padding: '0.5rem', background: 'rgba(15, 23, 42, 0.3)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text-muted)' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-muted mb-1 block">Servicio - Producto</label>
+                                <input
+                                    type="text"
+                                    value={`${editingSubscription.service_name} - ${editingSubscription.product_name}`}
+                                    disabled
+                                    style={{ width: '100%', padding: '0.5rem', background: 'rgba(15, 23, 42, 0.3)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text-muted)' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-muted mb-1 block">Nombre del Proyecto</label>
+                                <input
+                                    type="text"
+                                    placeholder="Ej: Tienda Online, App Móvil, etc."
+                                    value={editForm.project_name}
+                                    onChange={e => setEditForm({ ...editForm, project_name: e.target.value })}
+                                    style={{ width: '100%', padding: '0.5rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--border)', borderRadius: '4px', color: 'white' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-muted mb-1 block">Fecha de Próximo Pago</label>
+                                <input
+                                    type="date"
+                                    value={editForm.next_payment_date}
+                                    onChange={e => setEditForm({ ...editForm, next_payment_date: e.target.value })}
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 mt-4" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+                                <Button type="button" variant="secondary" onClick={closeEditModal} disabled={isSubmitting}>Cancelar</Button>
+                                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Guardar Cambios'}</Button>
                             </div>
                         </form>
                     </Card>
