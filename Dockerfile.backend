@@ -26,12 +26,16 @@ RUN echo "error_reporting = E_ALL" >> /usr/local/etc/php/conf.d/error-logging.in
     echo "log_errors = On" >> /usr/local/etc/php/conf.d/error-logging.ini && \
     echo "error_log = /var/log/php_errors.log" >> /usr/local/etc/php/conf.d/error-logging.ini
 
-# Create log files and set permissions
-RUN touch /var/log/php_errors.log && \
+# Create directories with proper permissions for www-data
+RUN mkdir -p /var/www/html/api/rate_limits && \
+    mkdir -p /var/www/html/uploads/receipts && \
+    mkdir -p /var/www/html/uploads/branding && \
+    chown -R www-data:www-data /var/www/html && \
+    chmod -R 755 /var/www/html && \
+    chmod -R 775 /var/www/html/api/rate_limits && \
+    chmod -R 775 /var/www/html/uploads && \
+    touch /var/log/php_errors.log && \
     chown www-data:www-data /var/log/php_errors.log && \
-    chmod 664 /var/log/php_errors.log && \
-    touch /var/www/html/api/error.log && \
-    chown www-data:www-data /var/www/html/api/error.log && \
-    chmod 664 /var/www/html/api/error.log
+    chmod 664 /var/log/php_errors.log
 
 EXPOSE 80

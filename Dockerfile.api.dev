@@ -1,0 +1,25 @@
+FROM php:8.2-apache
+
+# Install extensions
+RUN docker-php-ext-install pdo pdo_mysql
+
+# Enable Apache modules
+RUN a2enmod rewrite headers
+
+# Configure Apache to pass Authorization header
+RUN echo 'SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1' >> /etc/apache2/apache2.conf
+
+# Enable PHP error logging for development
+RUN echo "error_reporting = E_ALL" >> /usr/local/etc/php/conf.d/error-logging.ini && \
+    echo "display_errors = On" >> /usr/local/etc/php/conf.d/error-logging.ini && \
+    echo "log_errors = On" >> /usr/local/etc/php/conf.d/error-logging.ini && \
+    echo "error_log = /var/log/php_errors.log" >> /usr/local/etc/php/conf.d/error-logging.ini
+
+# Create log file
+RUN touch /var/log/php_errors.log && chmod 666 /var/log/php_errors.log
+
+WORKDIR /var/www/html
+
+EXPOSE 80
+
+CMD ["apache2-foreground"]

@@ -24,7 +24,13 @@ class RateLimiter {
     
     public static function check(string $identifier): bool {
         if (!is_dir(self::$dir)) {
-            mkdir(self::$dir, 0750, true);
+            @mkdir(self::$dir, 0775, true);
+        }
+        
+        // If directory still doesn't exist or isn't writable, skip rate limiting
+        if (!is_dir(self::$dir) || !is_writable(self::$dir)) {
+            error_log('Rate limiter: Directory not writable, skipping rate limiting');
+            return true;
         }
         
         $file = self::$dir . md5($identifier) . '.json';
@@ -53,6 +59,11 @@ class RateLimiter {
     }
     
     public static function recordAttempt(string $identifier, bool $success): void {
+        // Skip if directory not writable
+        if (!is_dir(self::$dir) || !is_writable(self::$dir)) {
+            return;
+        }
+        
         $file = self::$dir . md5($identifier) . '.json';
         $now = time();
         
@@ -65,7 +76,7 @@ class RateLimiter {
         if ($success) {
             // Clear on success
             if (file_exists($file)) {
-                unlink($file);
+                @unlink($file);
             }
             return;
         }
@@ -77,7 +88,7 @@ class RateLimiter {
             $data['locked_until'] = $now + LOCKOUT_TIME;
         }
         
-        file_put_contents($file, json_encode($data), LOCK_EX);
+        @file_put_contents($file, json_encode($data), LOCK_EX);
     }
 }
 

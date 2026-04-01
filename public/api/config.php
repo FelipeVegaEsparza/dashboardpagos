@@ -43,8 +43,10 @@ error_reporting(E_ALL);
 set_error_handler(function($severity, $message, $file, $line) {
     $error = sprintf("[PHP Error] %s in %s:%d", $message, $file, $line);
     error_log($error);
-    // Also log to stderr for Docker
-    fwrite(STDERR, $error . "\n");
+    // Also log to stderr for Docker (if available)
+    if (defined('STDERR') && is_resource(STDERR)) {
+        fwrite(STDERR, $error . "\n");
+    }
     return false; // Let PHP handle it normally too
 });
 
