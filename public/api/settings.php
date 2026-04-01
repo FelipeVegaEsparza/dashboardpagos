@@ -229,10 +229,20 @@ function handleImageUpload(array $file, string $type): string|false {
     // Create upload directory
     $uploadDir = __DIR__ . '/../uploads/branding/';
     if (!is_dir($uploadDir)) {
-        if (!mkdir($uploadDir, 0755, true)) {
-            ApiResponse::serverError('Failed to create upload directory');
+        // Try to create with error suppression (in case of permission issues)
+        $created = @mkdir($uploadDir, 0775, true);
+        if (!$created) {
+            error_log('Failed to create branding directory: ' . $uploadDir);
+            ApiResponse::serverError('Failed to create upload directory. Check permissions.');
             return false;
         }
+    }
+    
+    // Ensure directory is writable
+    if (!is_writable($uploadDir)) {
+        error_log('Branding directory not writable: ' . $uploadDir);
+        ApiResponse::serverError('Upload directory not writable. Check permissions.');
+        return false;
     }
     
     // Generate filename
