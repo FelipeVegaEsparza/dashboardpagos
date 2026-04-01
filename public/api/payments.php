@@ -4,11 +4,27 @@
  * Optimized with transaction safety and race condition prevention
  */
 
-require_once 'config.php';
-require_once 'auth_middleware.php';
+try {
+    require_once 'config.php';
+    require_once 'auth_middleware.php';
+} catch (Exception $e) {
+    error_log('Failed to load required files in payments.php: ' . $e->getMessage());
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Server initialization failed', 'details' => $e->getMessage()]);
+    exit;
+}
 
 // Require authentication
-AuthMiddleware::requireAuth();
+try {
+    AuthMiddleware::requireAuth();
+} catch (Exception $e) {
+    error_log('Auth error in payments.php: ' . $e->getMessage());
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Authentication failed']);
+    exit;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -29,14 +45,21 @@ switch ($method) {
  * Handle GET request - Get payment history
  */
 function handleGet(PDO $pdo): void {
-    $subscriptionId = InputValidator::int($_GET['subscription_id'] ?? null);
-    
-    if (!$subscriptionId) {
-        ApiResponse::error('Subscription ID is required', 400);
-        return;
-    }
-    
     try {
+        $subscriptionId = InputValidator::int($_GET['subscription_id'] ?? null);
+        
+        if (!$subscriptionId) {
+            ApiResponse::error('Subscription ID is required', 400);
+            return;
+        }
+        
+        // Verify database connection
+        if (!isset($pdo) || !$pdo) {
+            error_log('Database connection not available in payments.php handleGet');
+            ApiResponse::serverError('Database connection failed');
+            return;
+        }
+        
         $stmt = $pdo->prepare("
             SELECT 
                 p.id, p.subscription_id, p.date, p.amount, p.status, 
@@ -51,8 +74,11 @@ function handleGet(PDO $pdo): void {
         ApiResponse::success(['items' => $payments]);
         
     } catch (PDOException $e) {
-        error_log('Error fetching payments: ' . $e->getMessage());
+        error_log('PDO Error fetching payments: ' . $e->getMessage());
         ApiResponse::serverError('Failed to fetch payments');
+    } catch (Exception $e) {
+        error_log('Unexpected error in payments.php handleGet: ' . $e->getMessage());
+        ApiResponse::serverError('An unexpected error occurred');
     }
 }
 

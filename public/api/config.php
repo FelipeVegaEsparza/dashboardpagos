@@ -29,9 +29,24 @@ function env($key, $default = null) {
 
 // Error handling - don't expose sensitive info in production
 $isProduction = env('ENVIRONMENT') === 'production';
-ini_set('display_errors', 0);
+ini_set('display_errors', $isProduction ? 0 : 1);
 ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/error.log');
+
+// Ensure error log directory exists and is writable
+$errorLogPath = __DIR__ . '/error.log';
+ini_set('error_log', $errorLogPath);
+
+// Also log to stderr for Docker container logs
+error_reporting(E_ALL);
+
+// Log all errors for debugging
+set_error_handler(function($severity, $message, $file, $line) {
+    $error = sprintf("[PHP Error] %s in %s:%d", $message, $file, $line);
+    error_log($error);
+    // Also log to stderr for Docker
+    fwrite(STDERR, $error . "\n");
+    return false; // Let PHP handle it normally too
+});
 
 // Register shutdown function to catch fatal errors and return JSON
 register_shutdown_function(function() {

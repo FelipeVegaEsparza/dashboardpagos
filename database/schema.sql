@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS payments (
     date DATE NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
     status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
+    receipt_url VARCHAR(500) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE
 );
 

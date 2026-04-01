@@ -26,4 +26,12 @@ RUN echo "error_reporting = E_ALL" >> /usr/local/etc/php/conf.d/error-logging.in
     echo "log_errors = On" >> /usr/local/etc/php/conf.d/error-logging.ini && \
     echo "error_log = /var/log/php_errors.log" >> /usr/local/etc/php/conf.d/error-logging.ini
 
+# Create log files and set permissions
+RUN touch /var/log/php_errors.log && \
+    chown www-data:www-data /var/log/php_errors.log && \
+    chmod 664 /var/log/php_errors.log && \
+    touch /var/www/html/api/error.log && \
+    chown www-data:www-data /var/www/html/api/error.log && \
+    chmod 664 /var/www/html/api/error.log
+
 EXPOSE 80
