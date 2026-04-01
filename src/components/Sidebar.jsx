@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { House, Users, Package, CreditCard, SignOut, User, Gear, ListChecks, Envelope, ChartPie } from 'phosphor-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
+import { getImageUrl } from '../utils/imageUrl';
 
 const Sidebar = () => {
     const location = useLocation();
@@ -30,7 +31,7 @@ const Sidebar = () => {
             try {
                 const response = await api.getSettings();
                 if (response.app_logo) {
-                    setLogoUrl(response.app_logo);
+                    setLogoUrl(getImageUrl(response.app_logo));
                 }
             } catch (error) {
                 console.error('Error loading logo:', error);

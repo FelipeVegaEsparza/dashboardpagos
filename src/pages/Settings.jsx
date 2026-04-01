@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { api } from '../services/api';
+import { getImageUrl } from '../utils/imageUrl';
 import { useAuth } from '../contexts/AuthContext';
 import { 
     Gear, 
@@ -397,7 +398,7 @@ const Settings = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 {(logoPreview || settings.app_logo) && (
                                     <img
-                                        src={logoPreview || settings.app_logo}
+                                        src={logoPreview || getImageUrl(settings.app_logo)}
                                         alt="Logo"
                                         style={{
                                             width: '80px',

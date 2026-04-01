@@ -3,6 +3,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/format';
+import { getImageUrl } from '../utils/imageUrl';
 import { Plus, Package, PencilSimple, Trash } from 'phosphor-react';
 
 const Services = () => {
@@ -206,7 +207,7 @@ const Services = () => {
                             }}>
                                 {currentService.image_url && (
                                     <img
-                                        src={currentService.image_url}
+                                        src={getImageUrl(currentService.image_url)}
                                         alt={currentService.name}
                                         style={{
                                             width: '300px',

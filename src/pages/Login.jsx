@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
+import { getImageUrl } from '../utils/imageUrl';
 import { Lock, User, Eye, EyeSlash } from 'phosphor-react';
 
 const Login = () => {
@@ -22,7 +23,7 @@ const Login = () => {
             try {
                 const response = await api.getSettings();
                 if (response.app_logo) {
-                    setLogoUrl(response.app_logo);
+                    setLogoUrl(getImageUrl(response.app_logo));
                 }
                 if (response.app_name) {
                     setAppName(response.app_name);
