@@ -70,15 +70,18 @@ function handleGet(PDO $pdo): void {
             SELECT 
                 s.id, s.client_id, s.product_id, s.project_name, s.start_date, 
                 s.next_payment_date, s.status,
-                c.name as client_name, c.phone as client_phone,
-                p.name as product_name, p.price, p.billing_cycle,
-                serv.name as service_name
+                COALESCE(c.name, CONCAT('⚠️ Cliente ID:', s.client_id)) as client_name, 
+                c.phone as client_phone,
+                COALESCE(p.name, CONCAT('⚠️ Producto ID:', s.product_id)) as product_name, 
+                COALESCE(p.price, 0) as price, 
+                COALESCE(p.billing_cycle, 'monthly') as billing_cycle,
+                COALESCE(serv.name, '⚠️ Servicio Desconocido') as service_name
             FROM subscriptions s
-            JOIN clients c ON s.client_id = c.id
-            JOIN products p ON s.product_id = p.id
-            JOIN services serv ON p.service_id = serv.id
+            LEFT JOIN clients c ON s.client_id = c.id
+            LEFT JOIN products p ON s.product_id = p.id
+            LEFT JOIN services serv ON p.service_id = serv.id
             $whereClause
-            ORDER BY s.next_payment_date ASC, c.name ASC
+            ORDER BY s.next_payment_date ASC, COALESCE(c.name, '') ASC
             LIMIT :limit OFFSET :offset
         ";
         
