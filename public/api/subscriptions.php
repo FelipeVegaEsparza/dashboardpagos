@@ -154,13 +154,24 @@ function handlePost(PDO $pdo): void {
         
         // Check for duplicate active subscription
         $stmt = $pdo->prepare("
-            SELECT id FROM subscriptions 
-            WHERE client_id = ? AND product_id = ? AND status = 'active'
+            SELECT id, status FROM subscriptions 
+            WHERE client_id = ? AND product_id = ?
         ");
         $stmt->execute([$clientId, $productId]);
-        if ($stmt->fetch()) {
+        $existingSubscription = $stmt->fetch();
+        
+        if ($existingSubscription) {
             $pdo->rollBack();
-            ApiResponse::error('Client already has an active subscription for this product', 409);
+            
+            if ($existingSubscription['status'] === 'active') {
+                ApiResponse::error('Client already has an ACTIVE subscription for this product. Please edit the existing subscription instead.', 409);
+            } else {
+                ApiResponse::error(
+                    'Client has a ' . strtoupper($existingSubscription['status']) . ' subscription for this product. ' .
+                    'Please reactivate the existing subscription (ID: ' . $existingSubscription['id'] . ') instead of creating a new one.',
+                    409
+                );
+            }
             return;
         }
         

@@ -50,7 +50,9 @@ const Subscriptions = () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await api.getSubscriptions({ status: 'active' });
+            // CAMBIO: Obtener TODAS las suscripciones, no solo las activas
+            // El filtro se aplicará en el frontend
+            const response = await api.getSubscriptions();
             console.log('Subscriptions response:', response);
             setSubscriptions(response.items || response || []);
         } catch (error) {
@@ -109,17 +111,60 @@ const Subscriptions = () => {
         const clientId = parseInt(newSubscription.client_id);
         const productId = parseInt(newSubscription.product_id);
         
-        const existingSubscription = subscriptions.find(
+        const existingActiveSubscription = subscriptions.find(
             sub => sub.client_id === clientId && 
                    sub.product_id === productId && 
                    sub.status === 'active'
         );
         
-        if (existingSubscription) {
-            showWarning('Suscripción duplicada', 
-                'Este cliente ya tiene una suscripción activa para este producto.\n\nNo se pueden crear suscripciones duplicadas. Si necesitas renovar o modificar la suscripción existente, usa la función de editar.'
+        const existingCancelledSubscription = subscriptions.find(
+            sub => sub.client_id === clientId && 
+                   sub.product_id === productId && 
+                   sub.status === 'cancelled'
+        );
+        
+        if (existingActiveSubscription) {
+            showError('Suscripción duplicada', 
+                'Este cliente ya tiene una suscripción ACTIVA para este producto.\n\nNo se pueden crear suscripciones duplicadas. Si necesitas renovar o modificar la suscripción existente, usa la función de editar.'
             );
             return;
+        }
+        
+        if (existingCancelledSubscription) {
+            // Mostrar advertencia pero permitir continuar
+            const confirmReactivate = window.confirm(
+                `Este cliente tiene una suscripción CANCELADA para este producto.\n\n` +
+                `¿Deseas reactivar la suscripción existente en lugar de crear una nueva?\n\n` +
+                `- Sí: Reactivará la suscripción cancelada\n` +
+                `- No: Intentará crear una nueva (puede fallar si el backend no lo permite)`
+            );
+            
+            if (confirmReactivate) {
+                // Reactivar la suscripción existente
+                try {
+                    await api.updateSubscription({
+                        id: existingCancelledSubscription.id,
+                        status: 'active',
+                        next_payment_date: newSubscription.start_date,
+                        project_name: newSubscription.project_name || existingCancelledSubscription.project_name
+                    });
+                    setShowModal(false);
+                    setNewSubscription({
+                        client_id: '',
+                        product_id: '',
+                        project_name: '',
+                        start_date: new Date().toISOString().split('T')[0]
+                    });
+                    setSelectedServiceId('');
+                    fetchSubscriptions();
+                    showSuccess('¡Suscripción reactivada!', 'La suscripción cancelada se ha reactivado correctamente.');
+                    return;
+                } catch (error) {
+                    showError('Error al reactivar', error.message || 'No se pudo reactivar la suscripción.');
+                    return;
+                }
+            }
+            // Si el usuario dice "No", continuar con la creación normal
         }
         
         setIsSubmitting(true);
@@ -248,6 +293,9 @@ const Subscriptions = () => {
     };
 
     const filteredSubscriptions = subscriptions.filter(sub => {
+        // CAMBIO: Filtrar solo suscripciones activas
+        if (sub.status !== 'active') return false;
+        
         const statusInfo = getPaymentStatus(sub.next_payment_date);
         const matchesService = filterService ? sub.service_name === filterService : true;
         const matchesProduct = filterProduct ? sub.product_name === filterProduct : true;
