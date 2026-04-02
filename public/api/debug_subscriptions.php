@@ -1,6 +1,7 @@
 <?php
 /**
- * Debug endpoint para encontrar suscripciones ocultas
+ * DIAGNÓSTICO COMPLETO DE SUSCRIPCIONES
+ * Encuentra por qué una suscripción no se muestra
  * ELIMINAR DESPUÉS DE USAR
  */
 
@@ -12,77 +13,105 @@ AuthMiddleware::requireAuth();
 header('Content-Type: application/json');
 
 try {
-    // Obtener parámetros
-    $clientId = $_GET['client_id'] ?? null;
-    $productId = $_GET['product_id'] ?? null;
+    // 1. Contar suscripciones activas en la BD
+    $stmt = $pdo->query("SELECT COUNT(*) FROM subscriptions WHERE status = 'active'");
+    $totalActive = $stmt->fetchColumn();
     
-    if ($clientId && $productId) {
-        // Buscar suscripciones específicas (todas, sin importar status)
-        $stmt = $pdo->prepare("
-            SELECT 
-                s.id, s.client_id, s.product_id, s.project_name, 
-                s.start_date, s.next_payment_date, s.status, s.created_at,
-                c.name as client_name,
-                p.name as product_name,
-                serv.name as service_name
-            FROM subscriptions s
-            JOIN clients c ON s.client_id = c.id
-            JOIN products p ON s.product_id = p.id
-            JOIN services serv ON p.service_id = serv.id
-            WHERE s.client_id = ? AND s.product_id = ?
-            ORDER BY s.created_at DESC
-        ");
-        $stmt->execute([$clientId, $productId]);
-        $subscriptions = $stmt->fetchAll();
-        
-        echo json_encode([
-            'success' => true,
-            'message' => 'Suscripciones encontradas para cliente ' . $clientId . ' y producto ' . $productId,
-            'count' => count($subscriptions),
-            'subscriptions' => $subscriptions
-        ]);
-    } else {
-        // Listar TODAS las suscripciones agrupadas por status
-        $stmt = $pdo->query("
-            SELECT 
-                s.status,
-                COUNT(*) as count,
-                GROUP_CONCAT(
-                    CONCAT(c.name, ' (', p.name, ')') 
-                    SEPARATOR ', '
-                ) as subscriptions_list
-            FROM subscriptions s
-            JOIN clients c ON s.client_id = c.id
-            JOIN products p ON s.product_id = p.id
-            GROUP BY s.status
-        ");
-        $statusSummary = $stmt->fetchAll();
-        
-        // Obtener todas las suscripciones no-activas
-        $stmt = $pdo->query("
-            SELECT 
-                s.id, s.client_id, s.product_id, s.project_name, 
-                s.start_date, s.next_payment_date, s.status, s.created_at,
-                c.name as client_name,
-                p.name as product_name,
-                serv.name as service_name
-            FROM subscriptions s
-            JOIN clients c ON s.client_id = c.id
-            JOIN products p ON s.product_id = p.id
-            JOIN services serv ON p.service_id = serv.id
-            WHERE s.status != 'active'
-            ORDER BY s.created_at DESC
-        ");
-        $nonActiveSubscriptions = $stmt->fetchAll();
-        
-        echo json_encode([
-            'success' => true,
-            'message' => 'Resumen de todas las suscripciones',
-            'status_summary' => $statusSummary,
-            'non_active_subscriptions' => $nonActiveSubscriptions,
-            'total_non_active' => count($nonActiveSubscriptions)
-        ]);
-    }
+    // 2. Buscar suscripciones con referencias rotas (INNER JOIN)
+    $stmt = $pdo->query("
+        SELECT COUNT(*) 
+        FROM subscriptions s
+        INNER JOIN clients c ON s.client_id = c.id
+        INNER JOIN products p ON s.product_id = p.id
+        INNER JOIN services serv ON p.service_id = serv.id
+        WHERE s.status = 'active'
+    ");
+    $activeWithValidRefs = $stmt->fetchColumn();
+    
+    // 3. Encontrar las suscripciones con referencias rotas
+    $stmt = $pdo->query("
+        SELECT 
+            s.id,
+            s.client_id,
+            s.product_id,
+            s.status,
+            s.project_name,
+            s.next_payment_date,
+            CASE WHEN c.id IS NULL THEN '❌ CLIENTE ELIMINADO' ELSE c.name END as client_name,
+            CASE WHEN p.id IS NULL THEN '❌ PRODUCTO ELIMINADO' ELSE p.name END as product_name,
+            CASE WHEN serv.id IS NULL THEN '❌ SERVICIO ELIMINADO' ELSE serv.name END as service_name,
+            CASE 
+                WHEN c.id IS NULL THEN 'broken_client'
+                WHEN p.id IS NULL THEN 'broken_product'
+                WHEN serv.id IS NULL THEN 'broken_service'
+                ELSE 'ok'
+            END as problem
+        FROM subscriptions s
+        LEFT JOIN clients c ON s.client_id = c.id
+        LEFT JOIN products p ON s.product_id = p.id
+        LEFT JOIN services serv ON p.service_id = serv.id
+        WHERE s.status = 'active'
+            AND (c.id IS NULL OR p.id IS NULL OR serv.id IS NULL)
+    ");
+    $brokenSubscriptions = $stmt->fetchAll();
+    
+    // 4. Listar TODAS las suscripciones activas con LEFT JOIN
+    $stmt = $pdo->query("
+        SELECT 
+            s.id,
+            s.client_id,
+            s.product_id,
+            s.status,
+            s.project_name,
+            s.start_date,
+            s.next_payment_date,
+            c.name as client_name,
+            p.name as product_name,
+            p.price,
+            p.billing_cycle,
+            serv.name as service_name
+        FROM subscriptions s
+        LEFT JOIN clients c ON s.client_id = c.id
+        LEFT JOIN products p ON s.product_id = p.id
+        LEFT JOIN services serv ON p.service_id = serv.id
+        WHERE s.status = 'active'
+        ORDER BY s.id DESC
+    ");
+    $allActiveSubscriptions = $stmt->fetchAll();
+    
+    // 5. Estadísticas
+    $stmt = $pdo->query("
+        SELECT 
+            COUNT(*) as total,
+            COUNT(CASE WHEN c.name IS NOT NULL THEN 1 END) as with_client,
+            COUNT(CASE WHEN p.name IS NOT NULL THEN 1 END) as with_product,
+            COUNT(CASE WHEN serv.name IS NOT NULL THEN 1 END) as with_service
+        FROM subscriptions s
+        LEFT JOIN clients c ON s.client_id = c.id
+        LEFT JOIN products p ON s.product_id = p.id
+        LEFT JOIN services serv ON p.service_id = serv.id
+        WHERE s.status = 'active'
+    ");
+    $stats = $stmt->fetch();
+    
+    $problemDetected = count($brokenSubscriptions) > 0;
+    
+    echo json_encode([
+        'success' => true,
+        'diagnosis' => [
+            'total_active_in_db' => (int)$totalActive,
+            'active_with_valid_refs' => (int)$activeWithValidRefs,
+            'broken_subscriptions_count' => count($brokenSubscriptions),
+            'problem_detected' => $problemDetected,
+            'missing_subscriptions' => (int)$totalActive - (int)$activeWithValidRefs,
+            'stats' => $stats
+        ],
+        'broken_subscriptions' => $brokenSubscriptions,
+        'all_active_subscriptions' => $allActiveSubscriptions,
+        'recommendation' => $problemDetected
+            ? '⚠️ PROBLEMA ENCONTRADO: Hay ' . count($brokenSubscriptions) . ' suscripción(es) con referencias rotas (cliente/producto/servicio eliminado). Solución: Cambiar JOIN a LEFT JOIN en subscriptions.php o reparar las referencias en la BD.'
+            : '✅ Todas las suscripciones tienen referencias válidas. El problema puede ser de paginación o filtros en el frontend.'
+    ], JSON_PRETTY_PRINT);
     
 } catch (PDOException $e) {
     http_response_code(500);
