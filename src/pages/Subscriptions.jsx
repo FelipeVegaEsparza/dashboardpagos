@@ -50,9 +50,9 @@ const Subscriptions = () => {
         try {
             setLoading(true);
             setError(null);
-            // CAMBIO: Obtener TODAS las suscripciones, no solo las activas
+            // CAMBIO: Obtener TODAS las suscripciones sin límite de paginación
             // El filtro se aplicará en el frontend
-            const response = await api.getSubscriptions();
+            const response = await api.getSubscriptions({ limit: 1000 });
             console.log('Subscriptions response:', response);
             setSubscriptions(response.items || response || []);
         } catch (error) {
