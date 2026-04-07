@@ -20,6 +20,7 @@ const Payments = () => {
 
     // Filters
     const [filterClient, setFilterClient] = useState('');
+    const [filterService, setFilterService] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
 
     // Data for form
@@ -142,8 +143,9 @@ const Payments = () => {
 
     const filteredPayments = payments.filter(payment => {
         const matchesClient = filterClient ? payment.client_name?.toLowerCase().includes(filterClient.toLowerCase()) : true;
+        const matchesService = filterService ? payment.service_name?.toLowerCase().includes(filterService.toLowerCase()) : true;
         const matchesStatus = filterStatus ? payment.status === filterStatus : true;
-        return matchesClient && matchesStatus;
+        return matchesClient && matchesService && matchesStatus;
     });
 
     const getStatusInfo = (status) => {
@@ -184,6 +186,22 @@ const Payments = () => {
                     placeholder="Buscar cliente..."
                     value={filterClient}
                     onChange={e => setFilterClient(e.target.value)}
+                    style={{
+                        flex: 1,
+                        padding: '0.75rem 1rem',
+                        background: 'rgba(15, 23, 42, 0.4)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        color: 'var(--text-main)',
+                        fontSize: '0.95rem'
+                    }}
+                />
+
+                <input
+                    type="text"
+                    placeholder="Buscar servicio..."
+                    value={filterService}
+                    onChange={e => setFilterService(e.target.value)}
                     style={{
                         flex: 1,
                         padding: '0.75rem 1rem',
