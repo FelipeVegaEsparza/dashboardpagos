@@ -27,7 +27,7 @@ const CancelledSubscriptions = () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await api.getSubscriptions({ status: 'cancelled' });
+            const response = await api.getSubscriptions({ status: 'cancelled', limit: 1000 });
             setSubscriptions(response.items || response || []);
         } catch (error) {
             console.error('Error fetching cancelled subscriptions:', error);

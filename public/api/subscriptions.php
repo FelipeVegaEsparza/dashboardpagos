@@ -40,7 +40,7 @@ function handleGet(PDO $pdo): void {
     $clientId = InputValidator::int($_GET['client_id'] ?? null);
     $status = $_GET['status'] ?? null;
     $page = InputValidator::int($_GET['page'] ?? 1, 1);
-    $limit = min(InputValidator::int($_GET['limit'] ?? 20, 20), 100);
+    $limit = min(InputValidator::int($_GET['limit'] ?? 100, 100), 1000);
     $offset = ($page - 1) * $limit;
     
     try {

@@ -47,11 +47,9 @@ switch ($method) {
 function handleGet(PDO $pdo): void {
     try {
         $subscriptionId = InputValidator::int($_GET['subscription_id'] ?? null);
-        
-        if (!$subscriptionId) {
-            ApiResponse::error('Subscription ID is required', 400);
-            return;
-        }
+        $page = InputValidator::int($_GET['page'] ?? 1, 1);
+        $limit = min(InputValidator::int($_GET['limit'] ?? 100, 100), 1000);
+        $offset = ($page - 1) * $limit;
         
         // Verify database connection
         if (!isset($pdo) || !$pdo) {
@@ -60,18 +58,59 @@ function handleGet(PDO $pdo): void {
             return;
         }
         
-        $stmt = $pdo->prepare("
-            SELECT 
-                p.id, p.subscription_id, p.date, p.amount, p.status, 
-                p.receipt_url, p.created_at
-            FROM payments p
-            WHERE p.subscription_id = ?
-            ORDER BY p.date DESC, p.id DESC
-        ");
-        $stmt->execute([$subscriptionId]);
-        $payments = $stmt->fetchAll();
-        
-        ApiResponse::success(['items' => $payments]);
+        // Si se proporciona subscription_id, filtrar por esa suscripción
+        // Si no, devolver TODOS los pagos con información de suscripción
+        if ($subscriptionId) {
+            // Pagos de una suscripción específica
+            $stmt = $pdo->prepare("
+                SELECT 
+                    p.id, p.subscription_id, p.date, p.amount, p.status, 
+                    p.receipt_url, p.created_at
+                FROM payments p
+                WHERE p.subscription_id = ?
+                ORDER BY p.date DESC, p.id DESC
+            ");
+            $stmt->execute([$subscriptionId]);
+            $payments = $stmt->fetchAll();
+            
+            ApiResponse::success(['items' => $payments]);
+        } else {
+            // TODOS los pagos con información completa
+            $countSql = "SELECT COUNT(*) FROM payments";
+            $stmt = $pdo->query($countSql);
+            $total = $stmt->fetchColumn();
+            
+            $stmt = $pdo->prepare("
+                SELECT 
+                    p.id, 
+                    p.subscription_id, 
+                    p.date, 
+                    p.amount, 
+                    p.status, 
+                    p.receipt_url, 
+                    p.created_at,
+                    s.project_name,
+                    COALESCE(c.name, CONCAT('⚠️ Cliente ID:', s.client_id)) as client_name,
+                    COALESCE(prod.name, CONCAT('⚠️ Producto ID:', s.product_id)) as product_name,
+                    COALESCE(serv.name, '⚠️ Servicio Desconocido') as service_name
+                FROM payments p
+                LEFT JOIN subscriptions s ON p.subscription_id = s.id
+                LEFT JOIN clients c ON s.client_id = c.id
+                LEFT JOIN products prod ON s.product_id = prod.id
+                LEFT JOIN services serv ON prod.service_id = serv.id
+                ORDER BY p.date DESC, p.id DESC
+                LIMIT :limit OFFSET :offset
+            ");
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            $payments = $stmt->fetchAll();
+            
+            ApiResponse::success([
+                'items' => $payments,
+                'pagination' => Pagination::meta($page, $limit, $total)
+            ]);
+        }
         
     } catch (PDOException $e) {
         error_log('PDO Error fetching payments: ' . $e->getMessage());

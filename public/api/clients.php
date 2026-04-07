@@ -37,7 +37,7 @@ switch ($method) {
  * Handle GET request - List clients with pagination and search
  */
 function handleGet(PDO $pdo): void {
-    $pagination = Pagination::getParams(20, 100);
+    $pagination = Pagination::getParams(100, 1000);
     $search = $_GET['search'] ?? '';
     
     try {

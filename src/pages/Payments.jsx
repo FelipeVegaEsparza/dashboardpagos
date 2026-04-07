@@ -59,33 +59,10 @@ const Payments = () => {
         try {
             setLoading(true);
             setError(null);
-            // TODO: Crear endpoint para obtener todos los pagos
-            // Por ahora obtenemos suscripciones y sus pagos
-            const subsResponse = await api.getSubscriptions({ all: true });
-            const allPayments = [];
-            
-            for (const sub of (subsResponse.items || subsResponse || [])) {
-                try {
-                    const paymentsResponse = await api.getPayments(sub.id);
-                    const subPayments = paymentsResponse.items || paymentsResponse || [];
-                    subPayments.forEach(payment => {
-                        allPayments.push({
-                            ...payment,
-                            subscription_id: sub.id,
-                            client_name: sub.client_name,
-                            service_name: sub.service_name,
-                            product_name: sub.product_name,
-                            project_name: sub.project_name
-                        });
-                    });
-                } catch (e) {
-                    console.error('Error fetching payments for sub', sub.id, e);
-                }
-            }
-            
-            // Ordenar por fecha descendente
-            allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
-            setPayments(allPayments);
+            // Obtener TODOS los pagos en una sola petición
+            const response = await api.get('/payments.php?limit=1000');
+            const paymentsData = response.data?.items || response.items || response || [];
+            setPayments(paymentsData);
         } catch (error) {
             console.error('Error fetching payments:', error);
             setError(error.message || 'Error al cargar pagos');
@@ -105,7 +82,7 @@ const Payments = () => {
 
     const fetchSubscriptions = async () => {
         try {
-            const response = await api.getSubscriptions({ all: true });
+            const response = await api.getSubscriptions({ limit: 1000 });
             setSubscriptions(response.items || response || []);
         } catch (error) {
             console.error('Error fetching subscriptions:', error);
