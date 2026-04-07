@@ -26,6 +26,7 @@ const Payments = () => {
     // Data for form
     const [clients, setClients] = useState([]);
     const [subscriptions, setSubscriptions] = useState([]);
+    const [services, setServices] = useState([]);
 
     // New Payment Modal
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -42,6 +43,7 @@ const Payments = () => {
         fetchPayments();
         fetchClients();
         fetchSubscriptions();
+        fetchServices();
         
         // If coming from subscriptions with preselected subscription, open payment modal
         if (preselectedSub) {
@@ -87,6 +89,15 @@ const Payments = () => {
             setSubscriptions(response.items || response || []);
         } catch (error) {
             console.error('Error fetching subscriptions:', error);
+        }
+    };
+
+    const fetchServices = async () => {
+        try {
+            const response = await api.getServices();
+            setServices(response.items || response || []);
+        } catch (error) {
+            console.error('Error fetching services:', error);
         }
     };
 
@@ -143,7 +154,7 @@ const Payments = () => {
 
     const filteredPayments = payments.filter(payment => {
         const matchesClient = filterClient ? payment.client_name?.toLowerCase().includes(filterClient.toLowerCase()) : true;
-        const matchesService = filterService ? payment.service_name?.toLowerCase().includes(filterService.toLowerCase()) : true;
+        const matchesService = filterService ? payment.service_name === filterService : true;
         const matchesStatus = filterStatus ? payment.status === filterStatus : true;
         return matchesClient && matchesService && matchesStatus;
     });
@@ -197,9 +208,7 @@ const Payments = () => {
                     }}
                 />
 
-                <input
-                    type="text"
-                    placeholder="Buscar servicio..."
+                <select
                     value={filterService}
                     onChange={e => setFilterService(e.target.value)}
                     style={{
@@ -209,9 +218,17 @@ const Payments = () => {
                         border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: '12px',
                         color: 'var(--text-main)',
+                        cursor: 'pointer',
                         fontSize: '0.95rem'
                     }}
-                />
+                >
+                    <option value="">Todos los Servicios</option>
+                    {services.map(service => (
+                        <option key={service.id} value={service.name}>
+                            {service.name}
+                        </option>
+                    ))}
+                </select>
 
                 <select
                     value={filterStatus}
